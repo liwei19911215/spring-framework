@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,14 @@ package org.springframework.test.context.support;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
@@ -41,16 +40,15 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.env.PropertySources;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.ResourcePropertySource;
+import org.springframework.lang.Nullable;
+import org.springframework.test.context.TestContextAnnotationUtils;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.util.TestContextResourceUtils;
 import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
-import org.springframework.util.ResourceUtils;
 import org.springframework.util.StringUtils;
 
 /**
@@ -61,6 +59,7 @@ import org.springframework.util.StringUtils;
  *
  * @author Sam Brannen
  * @author Anatoliy Korovin
+ * @author Phillip Webb
  * @since 4.1
  * @see TestPropertySource
  */
@@ -75,152 +74,70 @@ public abstract class TestPropertySourceUtils {
 
 	private static final Log logger = LogFactory.getLog(TestPropertySourceUtils.class);
 
-	/**
-	 * Compares {@link MergedAnnotation} instances (presumably within the same
-	 * aggregate index) by their meta-distance, in reverse order.
-	 * <p>Using this {@link Comparator} to sort according to reverse meta-distance
-	 * ensures that directly present annotations take precedence over meta-present
-	 * annotations (within a given aggregate index). In other words, this follows
-	 * the last-one-wins principle of overriding properties.
-	 * @see MergedAnnotation#getAggregateIndex()
-	 * @see MergedAnnotation#getDistance()
-	 */
-	private static final Comparator<? super MergedAnnotation<?>> reversedMetaDistanceComparator =
-			Comparator.<MergedAnnotation<?>> comparingInt(MergedAnnotation::getDistance).reversed();
-
 
 	static MergedTestPropertySources buildMergedTestPropertySources(Class<?> testClass) {
-		MergedAnnotations mergedAnnotations = MergedAnnotations.from(testClass, SearchStrategy.EXHAUSTIVE);
-		return (mergedAnnotations.isPresent(TestPropertySource.class) ? mergeTestPropertySources(mergedAnnotations) :
-				MergedTestPropertySources.empty());
-	}
+		List<TestPropertySourceAttributes> attributesList = new ArrayList<>();
 
-	private static MergedTestPropertySources mergeTestPropertySources(MergedAnnotations mergedAnnotations) {
-		List<TestPropertySourceAttributes> attributesList = resolveTestPropertySourceAttributes(mergedAnnotations);
+		TestPropertySourceAttributes previousAttributes = null;
+		// Iterate over all aggregate levels, where each level is represented by
+		// a list of merged annotations found at that level (e.g., on a test
+		// class in the class hierarchy).
+		for (List<MergedAnnotation<TestPropertySource>> aggregatedAnnotations :
+				findRepeatableAnnotations(testClass, TestPropertySource.class)) {
+
+			// Convert all of the merged annotations for the current aggregate
+			// level to a list of TestPropertySourceAttributes.
+			List<TestPropertySourceAttributes> aggregatedAttributesList =
+					aggregatedAnnotations.stream().map(TestPropertySourceAttributes::new).collect(Collectors.toList());
+			// Merge all TestPropertySourceAttributes instances for the current
+			// aggregate level into a single TestPropertySourceAttributes instance.
+			TestPropertySourceAttributes mergedAttributes = mergeTestPropertySourceAttributes(aggregatedAttributesList);
+			if (mergedAttributes != null) {
+				if (!duplicationDetected(mergedAttributes, previousAttributes)) {
+					attributesList.add(mergedAttributes);
+				}
+				previousAttributes = mergedAttributes;
+			}
+		}
+
+		if (attributesList.isEmpty()) {
+			return MergedTestPropertySources.empty();
+		}
 		return new MergedTestPropertySources(mergeLocations(attributesList), mergeProperties(attributesList));
 	}
 
-	private static List<TestPropertySourceAttributes> resolveTestPropertySourceAttributes(
-			MergedAnnotations mergedAnnotations) {
+	@Nullable
+	private static TestPropertySourceAttributes mergeTestPropertySourceAttributes(
+			List<TestPropertySourceAttributes> aggregatedAttributesList) {
 
-		// Group by aggregate index to ensure proper separation of inherited and local annotations.
-		Map<Integer, List<MergedAnnotation<TestPropertySource>>> aggregateIndexMap = mergedAnnotations
-				.stream(TestPropertySource.class)
-				.collect(Collectors.groupingBy(MergedAnnotation::getAggregateIndex, TreeMap::new,
-					Collectors.mapping(x -> x, Collectors.toList())));
+		TestPropertySourceAttributes mergedAttributes = null;
+		TestPropertySourceAttributes previousAttributes = null;
+		for (TestPropertySourceAttributes currentAttributes : aggregatedAttributesList) {
+			if (mergedAttributes == null) {
+				mergedAttributes = currentAttributes;
+			}
+			else if (!duplicationDetected(currentAttributes, previousAttributes)) {
+				mergedAttributes.mergeWith(currentAttributes);
+			}
+			previousAttributes = currentAttributes;
+		}
 
-		// Stream the lists of annotations per aggregate index, merge each list into a
-		// single TestPropertySourceAttributes instance, and collect the results.
-		return aggregateIndexMap.values().stream()
-				.map(TestPropertySourceUtils::createTestPropertySourceAttributes)
-				.collect(Collectors.toList());
+		return mergedAttributes;
 	}
 
-	/**
-	 * Create a merged {@link TestPropertySourceAttributes} instance from all
-	 * annotations in the supplied list for a given aggregate index as if there
-	 * were only one such annotation.
-	 * <p>Within the supplied list, sort according to reversed meta-distance of
-	 * the annotations from the declaring class. This ensures that directly present
-	 * annotations take precedence over meta-present annotations within the current
-	 * aggregate index.
-	 * <p>If a given {@link TestPropertySource @TestPropertySource} does not
-	 * declare properties or locations, an attempt will be made to detect a default
-	 * properties file.
-	 */
-	private static TestPropertySourceAttributes createTestPropertySourceAttributes(
-			List<MergedAnnotation<TestPropertySource>> list) {
+	private static boolean duplicationDetected(TestPropertySourceAttributes currentAttributes,
+			@Nullable TestPropertySourceAttributes previousAttributes) {
 
-		list.sort(reversedMetaDistanceComparator);
+		boolean duplicationDetected =
+				(currentAttributes.equals(previousAttributes) && !currentAttributes.isEmpty());
 
-		List<String> locations = new ArrayList<>();
-		List<String> properties = new ArrayList<>();
-		Class<?> declaringClass = null;
-		Boolean inheritLocations = null;
-		Boolean inheritProperties = null;
-
-		// Merge all @TestPropertySource annotations within the current
-		// aggregate index into a single TestPropertySourceAttributes instance,
-		// simultaneously ensuring that all such annotations have the same
-		// declaringClass, inheritLocations, and inheritProperties values.
-		for (MergedAnnotation<TestPropertySource> mergedAnnotation : list) {
-			Class<?> currentDeclaringClass = (Class<?>) mergedAnnotation.getSource();
-			if (declaringClass != null && !declaringClass.equals(currentDeclaringClass)) {
-				throw new IllegalStateException("Detected @TestPropertySource declarations within an aggregate index " +
-						"with different declaring classes: " + declaringClass.getName() + " and " +
-						currentDeclaringClass.getName());
-			}
-			declaringClass = currentDeclaringClass;
-
-			TestPropertySource testPropertySource = mergedAnnotation.synthesize();
-			if (logger.isTraceEnabled()) {
-				logger.trace(String.format("Retrieved %s for declaring class [%s].", testPropertySource,
-					declaringClass.getName()));
-			}
-
-			Boolean currentInheritLocations = testPropertySource.inheritLocations();
-			assertConsistentValues(testPropertySource, declaringClass, "inheritLocations", inheritLocations,
-				currentInheritLocations);
-			inheritLocations = currentInheritLocations;
-
-			Boolean currentInheritProperties = testPropertySource.inheritProperties();
-			assertConsistentValues(testPropertySource, declaringClass, "inheritProperties", inheritProperties,
-				currentInheritProperties);
-			inheritProperties = currentInheritProperties;
-
-			String[] currentLocations = testPropertySource.locations();
-			String[] currentProperties = testPropertySource.properties();
-			if (ObjectUtils.isEmpty(currentLocations) && ObjectUtils.isEmpty(currentProperties)) {
-				locations.add(detectDefaultPropertiesFile(declaringClass));
-			}
-			else {
-				Collections.addAll(locations, currentLocations);
-				Collections.addAll(properties, currentProperties);
-			}
+		if (duplicationDetected && logger.isDebugEnabled()) {
+			logger.debug(String.format("Ignoring duplicate %s declaration on %s since it is also declared on %s",
+					currentAttributes, currentAttributes.getDeclaringClass().getName(),
+					previousAttributes.getDeclaringClass().getName()));
 		}
 
-		TestPropertySourceAttributes attributes = new TestPropertySourceAttributes(declaringClass, locations,
-			inheritLocations, properties, inheritProperties);
-		if (logger.isTraceEnabled()) {
-			logger.trace(String.format("Resolved @TestPropertySource attributes %s for declaring class [%s].",
-				attributes, declaringClass.getName()));
-		}
-		return attributes;
-	}
-
-	private static void assertConsistentValues(TestPropertySource testPropertySource, Class<?> declaringClass,
-			String attributeName, Object trackedValue, Object currentValue) {
-
-		Assert.isTrue((trackedValue == null || trackedValue.equals(currentValue)),
-			() -> String.format("%s on class [%s] must declare the same value for '%s' " +
-					"as other directly present or meta-present @TestPropertySource annotations on [%2$s].",
-					testPropertySource, declaringClass.getName(), attributeName));
-	}
-
-	/**
-	 * Detect a default properties file for the supplied class, as specified
-	 * in the class-level Javadoc for {@link TestPropertySource}.
-	 */
-	private static String detectDefaultPropertiesFile(Class<?> testClass) {
-		String resourcePath = ClassUtils.convertClassNameToResourcePath(testClass.getName()) + ".properties";
-		ClassPathResource classPathResource = new ClassPathResource(resourcePath);
-
-		if (classPathResource.exists()) {
-			String prefixedResourcePath = ResourceUtils.CLASSPATH_URL_PREFIX + resourcePath;
-			if (logger.isInfoEnabled()) {
-				logger.info(String.format("Detected default properties file \"%s\" for test class [%s]",
-					prefixedResourcePath, testClass.getName()));
-			}
-			return prefixedResourcePath;
-		}
-		else {
-			String msg = String.format("Could not detect default properties file for test class [%s]: " +
-					"%s does not exist. Either declare the 'locations' or 'properties' attributes " +
-					"of @TestPropertySource or make the default properties file available.", testClass.getName(),
-					classPathResource);
-			logger.error(msg);
-			throw new IllegalStateException(msg);
-		}
+		return duplicationDetected;
 	}
 
 	private static String[] mergeLocations(List<TestPropertySourceAttributes> attributesList) {
@@ -230,7 +147,7 @@ public abstract class TestPropertySourceUtils {
 				logger.trace(String.format("Processing locations for TestPropertySource attributes %s", attrs));
 			}
 			String[] locationsArray = TestContextResourceUtils.convertToClasspathResourcePaths(
-					attrs.getDeclaringClass(), attrs.getLocations());
+					attrs.getDeclaringClass(), true, attrs.getLocations());
 			locations.addAll(0, Arrays.asList(locationsArray));
 			if (!attrs.isInheritLocations()) {
 				break;
@@ -246,9 +163,7 @@ public abstract class TestPropertySourceUtils {
 				logger.trace(String.format("Processing inlined properties for TestPropertySource attributes %s", attrs));
 			}
 			String[] attrProps = attrs.getProperties();
-			if (attrProps != null) {
-				properties.addAll(0, Arrays.asList(attrProps));
-			}
+			properties.addAll(0, Arrays.asList(attrProps));
 			if (!attrs.isInheritProperties()) {
 				break;
 			}
@@ -408,6 +323,50 @@ public abstract class TestPropertySourceUtils {
 		}
 
 		return map;
+	}
+
+	private static <T extends Annotation> List<List<MergedAnnotation<T>>> findRepeatableAnnotations(
+			Class<?> clazz, Class<T> annotationType) {
+
+		List<List<MergedAnnotation<T>>> listOfLists = new ArrayList<>();
+		findRepeatableAnnotations(clazz, annotationType, listOfLists, new int[] {0});
+		return listOfLists;
+	}
+
+	private static <T extends Annotation> void findRepeatableAnnotations(
+			Class<?> clazz, Class<T> annotationType, List<List<MergedAnnotation<T>>> listOfLists, int[] aggregateIndex) {
+
+		// Ensure we have a list for the current aggregate index.
+		if (listOfLists.size() < aggregateIndex[0] + 1) {
+			listOfLists.add(new ArrayList<>());
+		}
+
+		MergedAnnotations.from(clazz, SearchStrategy.DIRECT)
+			.stream(annotationType)
+			.sorted(highMetaDistancesFirst())
+			.forEach(annotation -> listOfLists.get(aggregateIndex[0]).add(0, annotation));
+
+		aggregateIndex[0]++;
+
+		// Declared on an interface?
+		for (Class<?> ifc : clazz.getInterfaces()) {
+			findRepeatableAnnotations(ifc, annotationType, listOfLists, aggregateIndex);
+		}
+
+		// Declared on a superclass?
+		Class<?> superclass = clazz.getSuperclass();
+		if (superclass != null & superclass != Object.class) {
+			findRepeatableAnnotations(superclass, annotationType, listOfLists, aggregateIndex);
+		}
+
+		// Declared on an enclosing class of an inner class?
+		if (TestContextAnnotationUtils.searchEnclosingClass(clazz)) {
+			findRepeatableAnnotations(clazz.getEnclosingClass(), annotationType, listOfLists, aggregateIndex);
+		}
+	}
+
+	private static <A extends Annotation> Comparator<MergedAnnotation<A>> highMetaDistancesFirst() {
+		return Comparator.<MergedAnnotation<A>> comparingInt(MergedAnnotation::getDistance).reversed();
 	}
 
 }
