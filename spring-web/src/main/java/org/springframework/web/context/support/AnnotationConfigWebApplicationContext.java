@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.support.BeanNameGenerator;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.annotation.AnnotatedBeanDefinitionReader;
@@ -27,7 +29,6 @@ import org.springframework.context.annotation.AnnotationConfigRegistry;
 import org.springframework.context.annotation.AnnotationConfigUtils;
 import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import org.springframework.context.annotation.ScopeMetadataResolver;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
@@ -36,24 +37,35 @@ import org.springframework.web.context.ContextLoader;
 /**
  * {@link org.springframework.web.context.WebApplicationContext WebApplicationContext}
  * implementation which accepts <em>component classes</em> as input &mdash; in particular
- * {@link org.springframework.context.annotation.Configuration @Configuration}-annotated
+ * {@link org.springframework.context.annotation.Configuration @Configuration}
  * classes, but also plain {@link org.springframework.stereotype.Component @Component}
- * classes and JSR-330 compliant classes using {@code javax.inject} annotations.
+ * classes as well as JSR-330 compliant classes using {@code jakarta.inject} annotations.
  *
  * <p>Allows for registering classes one by one (specifying class names as config
- * location) as well as for classpath scanning (specifying base packages as config location).
+ * locations) as well as via classpath scanning (specifying base packages as config
+ * locations).
  *
  * <p>This is essentially the equivalent of
  * {@link org.springframework.context.annotation.AnnotationConfigApplicationContext
- * AnnotationConfigApplicationContext} for a web environment.
+ * AnnotationConfigApplicationContext} for a web environment. However, in contrast to
+ * {@code AnnotationConfigApplicationContext}, this class does not extend
+ * {@link org.springframework.context.support.GenericApplicationContext
+ * GenericApplicationContext} and therefore does not provide some of the convenient
+ * {@code registerBean(...)} methods available in a {@code GenericApplicationContext}.
+ * If you wish to register annotated <em>component classes</em> with a
+ * {@code GenericApplicationContext} in a web environment, you may use a
+ * {@code GenericWebApplicationContext} with an
+ * {@link org.springframework.context.annotation.AnnotatedBeanDefinitionReader
+ * AnnotatedBeanDefinitionReader}. See the Javadoc for {@link GenericWebApplicationContext}
+ * for details and an example.
  *
  * <p>To make use of this application context, the
  * {@linkplain ContextLoader#CONTEXT_CLASS_PARAM "contextClass"} context-param for
  * ContextLoader and/or "contextClass" init-param for FrameworkServlet must be set to
  * the fully-qualified name of this class.
  *
- * <p>As of Spring 3.1, this class may also be directly instantiated and injected into
- * Spring's {@code DispatcherServlet} or {@code ContextLoaderListener} when using the
+ * <p>This class may also be directly instantiated and injected into Spring's
+ * {@code DispatcherServlet} or {@code ContextLoaderListener} when using the
  * {@link org.springframework.web.WebApplicationInitializer WebApplicationInitializer}
  * code-based alternative to {@code web.xml}. See its Javadoc for details and usage examples.
  *
@@ -80,17 +92,17 @@ import org.springframework.web.context.ContextLoader;
  *
  * @author Chris Beams
  * @author Juergen Hoeller
+ * @author Sam Brannen
  * @since 3.0
  * @see org.springframework.context.annotation.AnnotationConfigApplicationContext
+ * @see org.springframework.web.context.support.GenericWebApplicationContext
  */
 public class AnnotationConfigWebApplicationContext extends AbstractRefreshableWebApplicationContext
 		implements AnnotationConfigRegistry {
 
-	@Nullable
-	private BeanNameGenerator beanNameGenerator;
+	private @Nullable BeanNameGenerator beanNameGenerator;
 
-	@Nullable
-	private ScopeMetadataResolver scopeMetadataResolver;
+	private @Nullable ScopeMetadataResolver scopeMetadataResolver;
 
 	private final Set<Class<?>> componentClasses = new LinkedHashSet<>();
 
@@ -112,8 +124,7 @@ public class AnnotationConfigWebApplicationContext extends AbstractRefreshableWe
 	 * Return the custom {@link BeanNameGenerator} for use with {@link AnnotatedBeanDefinitionReader}
 	 * and/or {@link ClassPathBeanDefinitionScanner}, if any.
 	 */
-	@Nullable
-	protected BeanNameGenerator getBeanNameGenerator() {
+	protected @Nullable BeanNameGenerator getBeanNameGenerator() {
 		return this.beanNameGenerator;
 	}
 
@@ -132,8 +143,7 @@ public class AnnotationConfigWebApplicationContext extends AbstractRefreshableWe
 	 * Return the custom {@link ScopeMetadataResolver} for use with {@link AnnotatedBeanDefinitionReader}
 	 * and/or {@link ClassPathBeanDefinitionScanner}, if any.
 	 */
-	@Nullable
-	protected ScopeMetadataResolver getScopeMetadataResolver() {
+	protected @Nullable ScopeMetadataResolver getScopeMetadataResolver() {
 		return this.scopeMetadataResolver;
 	}
 
@@ -143,7 +153,7 @@ public class AnnotationConfigWebApplicationContext extends AbstractRefreshableWe
 	 * <p>Note that {@link #refresh()} must be called in order for the context
 	 * to fully process the new classes.
 	 * @param componentClasses one or more component classes,
-	 * e.g. {@link org.springframework.context.annotation.Configuration @Configuration} classes
+	 * for example, {@link org.springframework.context.annotation.Configuration @Configuration} classes
 	 * @see #scan(String...)
 	 * @see #loadBeanDefinitions(DefaultListableBeanFactory)
 	 * @see #setConfigLocation(String)
@@ -182,7 +192,7 @@ public class AnnotationConfigWebApplicationContext extends AbstractRefreshableWe
 	 * and if class loading fails (i.e. a {@code ClassNotFoundException} is raised),
 	 * assume the value is a package and attempt to scan it for component classes.
 	 * <p>Enables the default set of annotation configuration post processors, such that
-	 * {@code @Autowired}, {@code @Required}, and associated annotations can be used.
+	 * {@code @Autowired} and associated annotations can be used.
 	 * <p>Configuration class bean definitions are registered with generated bean
 	 * definition names unless the {@code value} attribute is provided to the stereotype
 	 * annotation.

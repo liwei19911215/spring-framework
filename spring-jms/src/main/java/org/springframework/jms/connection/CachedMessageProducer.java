@@ -16,17 +16,16 @@
 
 package org.springframework.jms.connection;
 
-import javax.jms.CompletionListener;
-import javax.jms.Destination;
-import javax.jms.JMSException;
-import javax.jms.Message;
-import javax.jms.MessageProducer;
-import javax.jms.Queue;
-import javax.jms.QueueSender;
-import javax.jms.Topic;
-import javax.jms.TopicPublisher;
-
-import org.springframework.lang.Nullable;
+import jakarta.jms.CompletionListener;
+import jakarta.jms.Destination;
+import jakarta.jms.JMSException;
+import jakarta.jms.Message;
+import jakarta.jms.MessageProducer;
+import jakarta.jms.Queue;
+import jakarta.jms.QueueSender;
+import jakarta.jms.Topic;
+import jakarta.jms.TopicPublisher;
+import org.jspecify.annotations.Nullable;
 
 /**
  * JMS MessageProducer decorator that adapts calls to a shared MessageProducer
@@ -39,14 +38,11 @@ class CachedMessageProducer implements MessageProducer, QueueSender, TopicPublis
 
 	private final MessageProducer target;
 
-	@Nullable
-	private Boolean originalDisableMessageID;
+	private @Nullable Boolean originalDisableMessageID;
 
-	@Nullable
-	private Boolean originalDisableMessageTimestamp;
+	private @Nullable Boolean originalDisableMessageTimestamp;
 
-	@Nullable
-	private Long originalDeliveryDelay;
+	private @Nullable Long originalDeliveryDelay;
 
 	private int deliveryMode;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2016 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@
 
 package org.springframework.web.servlet.mvc;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.jspecify.annotations.Nullable;
 
-import org.springframework.lang.Nullable;
 import org.springframework.web.servlet.ModelAndView;
 
 /**
@@ -93,11 +93,12 @@ import org.springframework.web.servlet.ModelAndView;
  * you all those references through convenient accessors but requires an
  * ApplicationContext reference on initialization.
  *
- * <p>Controllers can optionally implement the {@link LastModified} interface.
+ * <p>Controllers can use the {@code checkNotModified} methods on
+ * {@link org.springframework.web.context.request.WebRequest} for HTTP caching
+ * support.
  *
  * @author Rod Johnson
  * @author Juergen Hoeller
- * @see LastModified
  * @see SimpleControllerHandlerAdapter
  * @see AbstractController
  * @see org.springframework.mock.web.MockHttpServletRequest
@@ -120,7 +121,6 @@ public interface Controller {
 	 * @return a ModelAndView to render, or {@code null} if handled directly
 	 * @throws Exception in case of errors
 	 */
-	@Nullable
-	ModelAndView handleRequest(HttpServletRequest request, HttpServletResponse response) throws Exception;
+	@Nullable ModelAndView handleRequest(HttpServletRequest request, HttpServletResponse response) throws Exception;
 
 }

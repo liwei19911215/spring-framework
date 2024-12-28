@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,8 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.util.Assert;
 
 /**
@@ -36,7 +37,7 @@ import org.springframework.util.Assert;
  */
 public class ResourceOverridingShadowingClassLoader extends ShadowingClassLoader {
 
-	private static final Enumeration<URL> EMPTY_URL_ENUMERATION = new Enumeration<URL>() {
+	private static final Enumeration<URL> EMPTY_URL_ENUMERATION = new Enumeration<>() {
 		@Override
 		public boolean hasMoreElements() {
 			return false;
@@ -51,7 +52,7 @@ public class ResourceOverridingShadowingClassLoader extends ShadowingClassLoader
 	/**
 	 * Key is asked for value: value is actual value.
 	 */
-	private Map<String, String> overrides = new HashMap<>();
+	private final Map<String, String> overrides = new HashMap<>();
 
 
 	/**
@@ -105,8 +106,7 @@ public class ResourceOverridingShadowingClassLoader extends ShadowingClassLoader
 	}
 
 	@Override
-	@Nullable
-	public InputStream getResourceAsStream(String requestedPath) {
+	public @Nullable InputStream getResourceAsStream(String requestedPath) {
 		if (this.overrides.containsKey(requestedPath)) {
 			String overriddenPath = this.overrides.get(requestedPath);
 			return (overriddenPath != null ? super.getResourceAsStream(overriddenPath) : null);

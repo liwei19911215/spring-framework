@@ -16,8 +16,8 @@
 
 package org.springframework.validation.beanvalidation;
 
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorFactory;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorFactory;
 
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.util.Assert;
@@ -29,7 +29,7 @@ import org.springframework.util.Assert;
  * <p>Note that this class is meant for programmatic use, not for declarative use
  * in a standard {@code validation.xml} file. Consider
  * {@link org.springframework.web.bind.support.SpringWebConstraintValidatorFactory}
- * for declarative use in a web application, e.g. with JAX-RS or JAX-WS.
+ * for declarative use in a web application, for example, with JAX-RS or JAX-WS.
  *
  * @author Juergen Hoeller
  * @since 3.0

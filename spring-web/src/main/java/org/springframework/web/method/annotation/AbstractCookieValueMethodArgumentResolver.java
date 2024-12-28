@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,16 @@
 
 package org.springframework.web.method.annotation;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.core.MethodParameter;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.context.request.NativeWebRequest;
 
 /**
  * A base abstract class to resolve method arguments annotated with
@@ -70,6 +72,12 @@ public abstract class AbstractCookieValueMethodArgumentResolver extends Abstract
 		throw new MissingRequestCookieException(name, parameter);
 	}
 
+	@Override
+	protected void handleMissingValueAfterConversion(
+			String name, MethodParameter parameter, NativeWebRequest request) throws Exception {
+
+		throw new MissingRequestCookieException(name, parameter, true);
+	}
 
 	private static final class CookieValueNamedValueInfo extends NamedValueInfo {
 

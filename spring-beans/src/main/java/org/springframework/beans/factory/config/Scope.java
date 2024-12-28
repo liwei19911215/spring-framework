@@ -16,8 +16,9 @@
 
 package org.springframework.beans.factory.config;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.ObjectFactory;
-import org.springframework.lang.Nullable;
 
 /**
  * Strategy interface used by a {@link ConfigurableBeanFactory},
@@ -31,7 +32,7 @@ import org.springframework.lang.Nullable;
  * <p>{@link org.springframework.context.ApplicationContext} implementations
  * such as a {@link org.springframework.web.context.WebApplicationContext}
  * may register additional standard scopes specific to their environment,
- * e.g. {@link org.springframework.web.context.WebApplicationContext#SCOPE_REQUEST "request"}
+ * for example, {@link org.springframework.web.context.WebApplicationContext#SCOPE_REQUEST "request"}
  * and {@link org.springframework.web.context.WebApplicationContext#SCOPE_SESSION "session"},
  * based on this Scope SPI.
  *
@@ -89,8 +90,7 @@ public interface Scope {
 	 * @throws IllegalStateException if the underlying scope is not currently active
 	 * @see #registerDestructionCallback
 	 */
-	@Nullable
-	Object remove(String name);
+	@Nullable Object remove(String name);
 
 	/**
 	 * Register a callback to be executed on destruction of the specified
@@ -125,20 +125,19 @@ public interface Scope {
 
 	/**
 	 * Resolve the contextual object for the given key, if any.
-	 * E.g. the HttpServletRequest object for key "request".
+	 * For example, the HttpServletRequest object for key "request".
 	 * @param key the contextual key
 	 * @return the corresponding object, or {@code null} if none found
 	 * @throws IllegalStateException if the underlying scope is not currently active
 	 */
-	@Nullable
-	Object resolveContextualObject(String key);
+	@Nullable Object resolveContextualObject(String key);
 
 	/**
 	 * Return the <em>conversation ID</em> for the current underlying scope, if any.
 	 * <p>The exact meaning of the conversation ID depends on the underlying
 	 * storage mechanism. In the case of session-scoped objects, the
 	 * conversation ID would typically be equal to (or derived from) the
-	 * {@link javax.servlet.http.HttpSession#getId() session ID}; in the
+	 * {@link jakarta.servlet.http.HttpSession#getId() session ID}; in the
 	 * case of a custom conversation that sits within the overall session,
 	 * the specific ID for the current conversation would be appropriate.
 	 * <p><b>Note: This is an optional operation.</b> It is perfectly valid to
@@ -148,7 +147,6 @@ public interface Scope {
 	 * conversation ID for the current scope
 	 * @throws IllegalStateException if the underlying scope is not currently active
 	 */
-	@Nullable
-	String getConversationId();
+	@Nullable String getConversationId();
 
 }

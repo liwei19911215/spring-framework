@@ -21,19 +21,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
-import javax.persistence.SharedCacheMode;
-import javax.persistence.ValidationMode;
-import javax.persistence.spi.ClassTransformer;
-import javax.persistence.spi.PersistenceUnitTransactionType;
 import javax.sql.DataSource;
 
-import org.springframework.lang.Nullable;
+import jakarta.persistence.SharedCacheMode;
+import jakarta.persistence.ValidationMode;
+import jakarta.persistence.spi.ClassTransformer;
+import jakarta.persistence.spi.PersistenceUnitTransactionType;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
 /**
  * Spring's base implementation of the JPA
- * {@link javax.persistence.spi.PersistenceUnitInfo} interface,
+ * {@link jakarta.persistence.spi.PersistenceUnitInfo} interface,
  * used to bootstrap an {@code EntityManagerFactory} in a container.
  *
  * <p>This implementation is largely a JavaBean, offering mutators
@@ -44,29 +45,24 @@ import org.springframework.util.ClassUtils;
  * @author Costin Leau
  * @since 2.0
  */
+@SuppressWarnings("removal")
 public class MutablePersistenceUnitInfo implements SmartPersistenceUnitInfo {
 
-	@Nullable
-	private String persistenceUnitName;
+	private @Nullable String persistenceUnitName;
 
-	@Nullable
-	private String persistenceProviderClassName;
+	private @Nullable String persistenceProviderClassName;
 
-	@Nullable
-	private PersistenceUnitTransactionType transactionType;
+	private @Nullable PersistenceUnitTransactionType transactionType;
 
-	@Nullable
-	private DataSource nonJtaDataSource;
+	private @Nullable DataSource nonJtaDataSource;
 
-	@Nullable
-	private DataSource jtaDataSource;
+	private @Nullable DataSource jtaDataSource;
 
 	private final List<String> mappingFileNames = new ArrayList<>();
 
 	private final List<URL> jarFileUrls = new ArrayList<>();
 
-	@Nullable
-	private URL persistenceUnitRootUrl;
+	private @Nullable URL persistenceUnitRootUrl;
 
 	private final List<String> managedClassNames = new ArrayList<>();
 
@@ -82,8 +78,7 @@ public class MutablePersistenceUnitInfo implements SmartPersistenceUnitInfo {
 
 	private String persistenceXMLSchemaVersion = "2.0";
 
-	@Nullable
-	private String persistenceProviderPackageName;
+	private @Nullable String persistenceProviderPackageName;
 
 
 	public void setPersistenceUnitName(@Nullable String persistenceUnitName) {
@@ -91,8 +86,7 @@ public class MutablePersistenceUnitInfo implements SmartPersistenceUnitInfo {
 	}
 
 	@Override
-	@Nullable
-	public String getPersistenceUnitName() {
+	public @Nullable String getPersistenceUnitName() {
 		return this.persistenceUnitName;
 	}
 
@@ -101,8 +95,7 @@ public class MutablePersistenceUnitInfo implements SmartPersistenceUnitInfo {
 	}
 
 	@Override
-	@Nullable
-	public String getPersistenceProviderClassName() {
+	public @Nullable String getPersistenceProviderClassName() {
 		return this.persistenceProviderClassName;
 	}
 
@@ -126,8 +119,7 @@ public class MutablePersistenceUnitInfo implements SmartPersistenceUnitInfo {
 	}
 
 	@Override
-	@Nullable
-	public DataSource getJtaDataSource() {
+	public @Nullable DataSource getJtaDataSource() {
 		return this.jtaDataSource;
 	}
 
@@ -136,8 +128,7 @@ public class MutablePersistenceUnitInfo implements SmartPersistenceUnitInfo {
 	}
 
 	@Override
-	@Nullable
-	public DataSource getNonJtaDataSource() {
+	public @Nullable DataSource getNonJtaDataSource() {
 		return this.nonJtaDataSource;
 	}
 
@@ -164,14 +155,13 @@ public class MutablePersistenceUnitInfo implements SmartPersistenceUnitInfo {
 	}
 
 	@Override
-	@Nullable
-	public URL getPersistenceUnitRootUrl() {
+	public @Nullable URL getPersistenceUnitRootUrl() {
 		return this.persistenceUnitRootUrl;
 	}
 
 	/**
 	 * Add a managed class name to the persistence provider's metadata.
-	 * @see javax.persistence.spi.PersistenceUnitInfo#getManagedClassNames()
+	 * @see jakarta.persistence.spi.PersistenceUnitInfo#getManagedClassNames()
 	 * @see #addManagedPackage
 	 */
 	public void addManagedClassName(String managedClassName) {
@@ -256,8 +246,7 @@ public class MutablePersistenceUnitInfo implements SmartPersistenceUnitInfo {
 		this.persistenceProviderPackageName = persistenceProviderPackageName;
 	}
 
-	@Nullable
-	public String getPersistenceProviderPackageName() {
+	public @Nullable String getPersistenceProviderPackageName() {
 		return this.persistenceProviderPackageName;
 	}
 
@@ -267,8 +256,7 @@ public class MutablePersistenceUnitInfo implements SmartPersistenceUnitInfo {
 	 * @see org.springframework.util.ClassUtils#getDefaultClassLoader()
 	 */
 	@Override
-	@Nullable
-	public ClassLoader getClassLoader() {
+	public @Nullable ClassLoader getClassLoader() {
 		return ClassUtils.getDefaultClassLoader();
 	}
 
@@ -286,6 +274,16 @@ public class MutablePersistenceUnitInfo implements SmartPersistenceUnitInfo {
 	@Override
 	public ClassLoader getNewTempClassLoader() {
 		throw new UnsupportedOperationException("getNewTempClassLoader not supported");
+	}
+
+	@Override
+	public @Nullable String getScopeAnnotationName() {
+		return null;
+	}
+
+	@Override
+	public @Nullable List<String> getQualifierAnnotationNames() {
+		return null;
 	}
 
 

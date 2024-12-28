@@ -19,12 +19,11 @@ package org.springframework.orm.jpa.persistenceunit;
 import java.lang.instrument.ClassFileTransformer;
 import java.security.ProtectionDomain;
 
-import javax.persistence.spi.ClassTransformer;
-
+import jakarta.persistence.spi.ClassTransformer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -35,7 +34,7 @@ import org.springframework.util.Assert;
  * @author Rod Johnson
  * @author Juergen Hoeller
  * @since 2.0
- * @see javax.persistence.spi.PersistenceUnitInfo#addTransformer(javax.persistence.spi.ClassTransformer)
+ * @see jakarta.persistence.spi.PersistenceUnitInfo#addTransformer(jakarta.persistence.spi.ClassTransformer)
  */
 class ClassFileTransformerAdapter implements ClassFileTransformer {
 
@@ -54,8 +53,7 @@ class ClassFileTransformerAdapter implements ClassFileTransformer {
 
 
 	@Override
-	@Nullable
-	public byte[] transform(
+	public byte @Nullable [] transform(
 			ClassLoader loader, String className, Class<?> classBeingRedefined,
 			ProtectionDomain protectionDomain, byte[] classfileBuffer) {
 

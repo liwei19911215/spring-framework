@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,12 +21,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.context.HierarchicalMessageSource;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ResourceBundleMessageSource;
-import org.springframework.lang.Nullable;
 import org.springframework.ui.context.HierarchicalThemeSource;
 import org.springframework.ui.context.Theme;
 import org.springframework.ui.context.ThemeSource;
@@ -42,24 +42,22 @@ import org.springframework.ui.context.ThemeSource;
  * @see #setBasenamePrefix
  * @see java.util.ResourceBundle
  * @see org.springframework.context.support.ResourceBundleMessageSource
+ * @deprecated as of 6.0 in favor of using CSS, without direct replacement
  */
+@Deprecated(since = "6.0")
 public class ResourceBundleThemeSource implements HierarchicalThemeSource, BeanClassLoaderAware {
 
 	protected final Log logger = LogFactory.getLog(getClass());
 
-	@Nullable
-	private ThemeSource parentThemeSource;
+	private @Nullable ThemeSource parentThemeSource;
 
 	private String basenamePrefix = "";
 
-	@Nullable
-	private String defaultEncoding;
+	private @Nullable String defaultEncoding;
 
-	@Nullable
-	private Boolean fallbackToSystemLocale;
+	private @Nullable Boolean fallbackToSystemLocale;
 
-	@Nullable
-	private ClassLoader beanClassLoader;
+	private @Nullable ClassLoader beanClassLoader;
 
 	/** Map from theme name to Theme instance. */
 	private final Map<String, Theme> themeCache = new ConcurrentHashMap<>();
@@ -79,15 +77,14 @@ public class ResourceBundleThemeSource implements HierarchicalThemeSource, BeanC
 	}
 
 	@Override
-	@Nullable
-	public ThemeSource getParentThemeSource() {
+	public @Nullable ThemeSource getParentThemeSource() {
 		return this.parentThemeSource;
 	}
 
 	/**
 	 * Set the prefix that gets applied to the ResourceBundle basenames,
 	 * i.e. the theme names.
-	 * E.g.: basenamePrefix="test.", themeName="theme" -> basename="test.theme".
+	 * For example: basenamePrefix="test.", themeName="theme" &rarr; basename="test.theme".
 	 * <p>Note that ResourceBundle names are effectively classpath locations: As a
 	 * consequence, the JDK's standard ResourceBundle treats dots as package separators.
 	 * This means that "test.theme" is effectively equivalent to "test/theme",
@@ -136,8 +133,7 @@ public class ResourceBundleThemeSource implements HierarchicalThemeSource, BeanC
 	 * @see #createMessageSource
 	 */
 	@Override
-	@Nullable
-	public Theme getTheme(String themeName) {
+	public @Nullable Theme getTheme(String themeName) {
 		Theme theme = this.themeCache.get(themeName);
 		if (theme == null) {
 			synchronized (this.themeCache) {
@@ -189,8 +185,7 @@ public class ResourceBundleThemeSource implements HierarchicalThemeSource, BeanC
 	 * @param theme the Theme to (re-)initialize
 	 */
 	protected void initParent(Theme theme) {
-		if (theme.getMessageSource() instanceof HierarchicalMessageSource) {
-			HierarchicalMessageSource messageSource = (HierarchicalMessageSource) theme.getMessageSource();
+		if (theme.getMessageSource() instanceof HierarchicalMessageSource messageSource) {
 			if (getParentThemeSource() != null && messageSource.getParentMessageSource() == null) {
 				Theme parentTheme = getParentThemeSource().getTheme(theme.getName());
 				if (parentTheme != null) {

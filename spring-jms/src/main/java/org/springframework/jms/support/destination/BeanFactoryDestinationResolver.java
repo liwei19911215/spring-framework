@@ -16,21 +16,21 @@
 
 package org.springframework.jms.support.destination;
 
-import javax.jms.Destination;
-import javax.jms.JMSException;
-import javax.jms.Session;
+import jakarta.jms.Destination;
+import jakarta.jms.JMSException;
+import jakarta.jms.Session;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
  * {@link DestinationResolver} implementation based on a Spring {@link BeanFactory}.
  *
  * <p>Will lookup Spring managed beans identified by bean name,
- * expecting them to be of type {@code javax.jms.Destination}.
+ * expecting them to be of type {@code jakarta.jms.Destination}.
  *
  * @author Juergen Hoeller
  * @since 2.5
@@ -38,8 +38,7 @@ import org.springframework.util.Assert;
  */
 public class BeanFactoryDestinationResolver implements DestinationResolver, BeanFactoryAware {
 
-	@Nullable
-	private BeanFactory beanFactory;
+	private @Nullable BeanFactory beanFactory;
 
 
 	/**
@@ -57,7 +56,7 @@ public class BeanFactoryDestinationResolver implements DestinationResolver, Bean
 	 * replaced by the {@link BeanFactory} that creates it (c.f. the
 	 * {@link BeanFactoryAware} contract). So only use this constructor if you
 	 * are using this class outside the context of a Spring IoC container.
-	 * @param beanFactory the bean factory to be used to lookup {@link javax.jms.Destination Destination}
+	 * @param beanFactory the bean factory to be used to lookup {@link jakarta.jms.Destination Destination}
 	 */
 	public BeanFactoryDestinationResolver(BeanFactory beanFactory) {
 		Assert.notNull(beanFactory, "BeanFactory is required");

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,10 +22,10 @@ import org.hibernate.FlushMode;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.dao.DataAccessResourceFailureException;
-import org.springframework.lang.Nullable;
 import org.springframework.orm.hibernate5.SessionFactoryUtils;
 import org.springframework.orm.hibernate5.SessionHolder;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -50,8 +50,7 @@ import org.springframework.util.Assert;
  */
 public class OpenSessionInterceptor implements MethodInterceptor, InitializingBean {
 
-	@Nullable
-	private SessionFactory sessionFactory;
+	private @Nullable SessionFactory sessionFactory;
 
 
 	/**
@@ -64,8 +63,7 @@ public class OpenSessionInterceptor implements MethodInterceptor, InitializingBe
 	/**
 	 * Return the Hibernate SessionFactory that should be used to create Hibernate Sessions.
 	 */
-	@Nullable
-	public SessionFactory getSessionFactory() {
+	public @Nullable SessionFactory getSessionFactory() {
 		return this.sessionFactory;
 	}
 
@@ -78,8 +76,7 @@ public class OpenSessionInterceptor implements MethodInterceptor, InitializingBe
 
 
 	@Override
-	@Nullable
-	public Object invoke(MethodInvocation invocation) throws Throwable {
+	public @Nullable Object invoke(MethodInvocation invocation) throws Throwable {
 		SessionFactory sf = getSessionFactory();
 		Assert.state(sf != null, "No SessionFactory set");
 
@@ -112,27 +109,14 @@ public class OpenSessionInterceptor implements MethodInterceptor, InitializingBe
 	 * @see FlushMode#MANUAL
 	 */
 	protected Session openSession(SessionFactory sessionFactory) throws DataAccessResourceFailureException {
-		Session session = openSession();
-		if (session == null) {
-			try {
-				session = sessionFactory.openSession();
-				session.setHibernateFlushMode(FlushMode.MANUAL);
-			}
-			catch (HibernateException ex) {
-				throw new DataAccessResourceFailureException("Could not open Hibernate Session", ex);
-			}
+		try {
+			Session session = sessionFactory.openSession();
+			session.setHibernateFlushMode(FlushMode.MANUAL);
+			return session;
 		}
-		return session;
-	}
-
-	/**
-	 * Open a Session for the given SessionFactory.
-	 * @deprecated as of 5.0, in favor of {@link #openSession(SessionFactory)}
-	 */
-	@Deprecated
-	@Nullable
-	protected Session openSession() throws DataAccessResourceFailureException {
-		return null;
+		catch (HibernateException ex) {
+			throw new DataAccessResourceFailureException("Could not open Hibernate Session", ex);
+		}
 	}
 
 }

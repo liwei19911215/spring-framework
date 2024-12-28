@@ -16,18 +16,17 @@
 
 package org.springframework.orm.hibernate5;
 
-import javax.transaction.Status;
-import javax.transaction.Synchronization;
-import javax.transaction.SystemException;
-import javax.transaction.Transaction;
-import javax.transaction.TransactionManager;
-import javax.transaction.TransactionSynchronizationRegistry;
-import javax.transaction.UserTransaction;
-
+import jakarta.transaction.Status;
+import jakarta.transaction.Synchronization;
+import jakarta.transaction.SystemException;
+import jakarta.transaction.Transaction;
+import jakarta.transaction.TransactionManager;
+import jakarta.transaction.TransactionSynchronizationRegistry;
+import jakarta.transaction.UserTransaction;
 import org.hibernate.TransactionException;
 import org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform;
+import org.jspecify.annotations.Nullable;
 
-import org.springframework.lang.Nullable;
 import org.springframework.transaction.jta.UserTransactionAdapter;
 import org.springframework.util.Assert;
 
@@ -45,8 +44,7 @@ class ConfigurableJtaPlatform implements JtaPlatform {
 
 	private final UserTransaction userTransaction;
 
-	@Nullable
-	private final TransactionSynchronizationRegistry transactionSynchronizationRegistry;
+	private final @Nullable TransactionSynchronizationRegistry transactionSynchronizationRegistry;
 
 
 	/**

@@ -19,17 +19,17 @@ package org.springframework.validation.beanvalidation;
 import java.util.Iterator;
 import java.util.Set;
 
-import javax.validation.ConstraintViolation;
-import javax.validation.Validation;
-import javax.validation.Validator;
-import javax.validation.ValidatorFactory;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.aop.framework.AopProxyUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.config.BeanPostProcessor;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -42,8 +42,7 @@ import org.springframework.util.Assert;
  */
 public class BeanValidationPostProcessor implements BeanPostProcessor, InitializingBean {
 
-	@Nullable
-	private Validator validator;
+	private @Nullable Validator validator;
 
 	private boolean afterInitialization = false;
 
@@ -60,7 +59,7 @@ public class BeanValidationPostProcessor implements BeanPostProcessor, Initializ
 	 * Set the JSR-303 ValidatorFactory to delegate to for validating beans,
 	 * using its default Validator.
 	 * <p>Default is the default ValidatorFactory's default Validator.
-	 * @see javax.validation.ValidatorFactory#getValidator()
+	 * @see jakarta.validation.ValidatorFactory#getValidator()
 	 */
 	public void setValidatorFactory(ValidatorFactory validatorFactory) {
 		this.validator = validatorFactory.getValidator();
@@ -105,7 +104,7 @@ public class BeanValidationPostProcessor implements BeanPostProcessor, Initializ
 	/**
 	 * Perform validation of the given bean.
 	 * @param bean the bean instance to validate
-	 * @see javax.validation.Validator#validate
+	 * @see jakarta.validation.Validator#validate
 	 */
 	protected void doValidate(Object bean) {
 		Assert.state(this.validator != null, "No Validator set");

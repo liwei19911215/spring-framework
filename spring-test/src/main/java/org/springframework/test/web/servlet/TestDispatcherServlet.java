@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,12 +20,12 @@ import java.io.IOException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.jspecify.annotations.Nullable;
 
-import org.springframework.lang.Nullable;
 import org.springframework.mock.web.MockAsyncContext;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.util.Assert;
@@ -35,14 +35,13 @@ import org.springframework.web.context.request.async.CallableProcessingIntercept
 import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.context.request.async.DeferredResultProcessingInterceptor;
 import org.springframework.web.context.request.async.WebAsyncUtils;
-import org.springframework.web.multipart.support.StandardMultipartHttpServletRequest;
 import org.springframework.web.servlet.DispatcherServlet;
 import org.springframework.web.servlet.HandlerExecutionChain;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.util.WebUtils;
 
 /**
- * A sub-class of {@code DispatcherServlet} that saves the result in an
+ * A subclass of {@code DispatcherServlet} that saves the result in an
  * {@link MvcResult}. The {@code MvcResult} instance is expected to be available
  * as the request attribute {@link MockMvc#MVC_RESULT_ATTRIBUTE}.
  *
@@ -68,18 +67,14 @@ final class TestDispatcherServlet extends DispatcherServlet {
 	protected void service(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 
-		if (!request.getParts().isEmpty()) {
-			request = new StandardMultipartHttpServletRequest(request);
-		}
-
 		registerAsyncResultInterceptors(request);
 
 		super.service(request, response);
 
 		if (request.getAsyncContext() != null) {
 			MockAsyncContext asyncContext;
-			if (request.getAsyncContext() instanceof MockAsyncContext) {
-				asyncContext = (MockAsyncContext) request.getAsyncContext();
+			if (request.getAsyncContext() instanceof MockAsyncContext mockAsyncContext) {
+				asyncContext = mockAsyncContext;
 			}
 			else {
 				MockHttpServletRequest mockRequest = WebUtils.getNativeRequest(request, MockHttpServletRequest.class);
@@ -103,7 +98,7 @@ final class TestDispatcherServlet extends DispatcherServlet {
 		WebAsyncUtils.getAsyncManager(request).registerCallableInterceptor(KEY,
 				new CallableProcessingInterceptor() {
 					@Override
-					public <T> void postProcess(NativeWebRequest r, Callable<T> task, Object value) {
+					public <T> void postProcess(NativeWebRequest r, Callable<T> task, @Nullable Object value) {
 						// We got the result, must also wait for the dispatch
 						getMvcResult(request).setAsyncResult(value);
 					}
@@ -112,7 +107,7 @@ final class TestDispatcherServlet extends DispatcherServlet {
 		WebAsyncUtils.getAsyncManager(request).registerDeferredResultInterceptor(KEY,
 				new DeferredResultProcessingInterceptor() {
 					@Override
-					public <T> void postProcess(NativeWebRequest r, DeferredResult<T> result, Object value) {
+					public <T> void postProcess(NativeWebRequest r, DeferredResult<T> result, @Nullable Object value) {
 						getMvcResult(request).setAsyncResult(value);
 					}
 				});
@@ -123,7 +118,7 @@ final class TestDispatcherServlet extends DispatcherServlet {
 	}
 
 	@Override
-	protected HandlerExecutionChain getHandler(HttpServletRequest request) throws Exception {
+	protected @Nullable HandlerExecutionChain getHandler(HttpServletRequest request) throws Exception {
 		HandlerExecutionChain chain = super.getHandler(request);
 		if (chain != null) {
 			DefaultMvcResult mvcResult = getMvcResult(request);
@@ -143,7 +138,7 @@ final class TestDispatcherServlet extends DispatcherServlet {
 	}
 
 	@Override
-	protected ModelAndView processHandlerException(HttpServletRequest request, HttpServletResponse response,
+	protected @Nullable ModelAndView processHandlerException(HttpServletRequest request, HttpServletResponse response,
 			@Nullable Object handler, Exception ex) throws Exception {
 
 		ModelAndView mav = super.processHandlerException(request, response, handler, ex);

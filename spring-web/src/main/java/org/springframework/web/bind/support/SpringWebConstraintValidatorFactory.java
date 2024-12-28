@@ -16,8 +16,8 @@
 
 package org.springframework.web.bind.support;
 
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorFactory;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorFactory;
 
 import org.springframework.web.context.ContextLoader;
 import org.springframework.web.context.WebApplicationContext;
@@ -30,7 +30,7 @@ import org.springframework.web.context.WebApplicationContext;
  * <p>In contrast to
  * {@link org.springframework.validation.beanvalidation.SpringConstraintValidatorFactory},
  * this variant is meant for declarative use in a standard {@code validation.xml} file,
- * e.g. in combination with JAX-RS or JAX-WS.
+ * for example, in combination with JAX-RS or JAX-WS.
  *
  * @author Juergen Hoeller
  * @since 4.2.1

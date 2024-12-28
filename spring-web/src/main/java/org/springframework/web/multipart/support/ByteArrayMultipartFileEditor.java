@@ -18,8 +18,9 @@ package org.springframework.web.multipart.support;
 
 import java.io.IOException;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.propertyeditors.ByteArrayPropertyEditor;
-import org.springframework.lang.Nullable;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -33,8 +34,7 @@ public class ByteArrayMultipartFileEditor extends ByteArrayPropertyEditor {
 
 	@Override
 	public void setValue(@Nullable Object value) {
-		if (value instanceof MultipartFile) {
-			MultipartFile multipartFile = (MultipartFile) value;
+		if (value instanceof MultipartFile multipartFile) {
 			try {
 				super.setValue(multipartFile.getBytes());
 			}

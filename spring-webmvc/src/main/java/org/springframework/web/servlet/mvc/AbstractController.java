@@ -16,12 +16,13 @@
 
 package org.springframework.web.servlet.mvc;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import org.jspecify.annotations.Nullable;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.lang.Nullable;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.support.WebContentGenerator;
 import org.springframework.web.util.WebUtils;
@@ -135,7 +136,7 @@ public abstract class AbstractController extends WebContentGenerator implements 
 	 * different servlet containers; the only 100% safe way is a session mutex.
 	 * @see AbstractController#handleRequestInternal
 	 * @see org.springframework.web.util.HttpSessionMutexListener
-	 * @see org.springframework.web.util.WebUtils#getSessionMutex(javax.servlet.http.HttpSession)
+	 * @see org.springframework.web.util.WebUtils#getSessionMutex(jakarta.servlet.http.HttpSession)
 	 */
 	public final void setSynchronizeOnSession(boolean synchronizeOnSession) {
 		this.synchronizeOnSession = synchronizeOnSession;
@@ -150,12 +151,11 @@ public abstract class AbstractController extends WebContentGenerator implements 
 
 
 	@Override
-	@Nullable
-	public ModelAndView handleRequest(HttpServletRequest request, HttpServletResponse response)
+	public @Nullable ModelAndView handleRequest(HttpServletRequest request, HttpServletResponse response)
 			throws Exception {
 
 		if (HttpMethod.OPTIONS.matches(request.getMethod())) {
-			response.setHeader("Allow", getAllowHeader());
+			response.setHeader(HttpHeaders.ALLOW, getAllowHeader());
 			return null;
 		}
 
@@ -182,8 +182,7 @@ public abstract class AbstractController extends WebContentGenerator implements 
 	 * The contract is the same as for {@code handleRequest}.
 	 * @see #handleRequest
 	 */
-	@Nullable
-	protected abstract ModelAndView handleRequestInternal(HttpServletRequest request, HttpServletResponse response)
+	protected abstract @Nullable ModelAndView handleRequestInternal(HttpServletRequest request, HttpServletResponse response)
 			throws Exception;
 
 }

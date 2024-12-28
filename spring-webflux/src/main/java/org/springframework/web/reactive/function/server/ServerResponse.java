@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
@@ -35,12 +36,14 @@ import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.codec.HttpMessageWriter;
 import org.springframework.http.codec.json.Jackson2CodecSupport;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.reactive.function.BodyInserter;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.result.view.ViewResolver;
@@ -60,20 +63,9 @@ public interface ServerResponse {
 
 	/**
 	 * Return the status code of this response.
-	 * @return the status as an HttpStatus enum value
-	 * @throws IllegalArgumentException in case of an unknown HTTP status code
-	 * @see HttpStatus#valueOf(int)
+	 * @return the status as an HttpStatusCode value
 	 */
-	HttpStatus statusCode();
-
-	/**
-	 * Return the (potentially non-standard) status code of this response.
-	 * @return the status as an integer
-	 * @since 5.2
-	 * @see #statusCode()
-	 * @see HttpStatus#resolve(int)
-	 */
-	int rawStatusCode();
+	HttpStatusCode statusCode();
 
 	/**
 	 * Return the headers of this response.
@@ -106,11 +98,23 @@ public interface ServerResponse {
 	}
 
 	/**
+	 * Create a {@code ServerResponse} from the given {@link ErrorResponse}.
+	 * @param response the {@link ErrorResponse} to initialize from
+	 * @return {@code Mono} with the built response
+	 * @since 6.0
+	 */
+	static Mono<ServerResponse> from(ErrorResponse response) {
+		return status(response.getStatusCode())
+				.headers(headers -> headers.putAll(response.getHeaders()))
+				.bodyValue(response.getBody());
+	}
+
+	/**
 	 * Create a builder with the given HTTP status.
 	 * @param status the response status
 	 * @return the created builder
 	 */
-	static BodyBuilder status(HttpStatus status) {
+	static BodyBuilder status(HttpStatusCode status) {
 		return new DefaultServerResponseBuilder(status);
 	}
 
@@ -121,7 +125,7 @@ public interface ServerResponse {
 	 * @since 5.0.3
 	 */
 	static BodyBuilder status(int status) {
-		return new DefaultServerResponseBuilder(status);
+		return new DefaultServerResponseBuilder(HttpStatusCode.valueOf(status));
 	}
 
 	/**
@@ -231,13 +235,13 @@ public interface ServerResponse {
 		 * @return this builder
 		 * @see HttpHeaders#add(String, String)
 		 */
-		B header(String headerName, String... headerValues);
+		B header(String headerName, @Nullable String... headerValues);
 
 		/**
 		 * Manipulate this response's headers with the given consumer. The
 		 * headers provided to the consumer are "live", so that the consumer can be used to
 		 * {@linkplain HttpHeaders#set(String, String) overwrite} existing header values,
-		 * {@linkplain HttpHeaders#remove(Object) remove} values, or use any of the other
+		 * {@linkplain HttpHeaders#remove(String) remove} values, or use any of the other
 		 * {@link HttpHeaders} methods.
 		 * @param headersConsumer a function that consumes the {@code HttpHeaders}
 		 * @return this builder
@@ -265,7 +269,6 @@ public interface ServerResponse {
 		/**
 		 * Set the set of allowed {@link HttpMethod HTTP methods}, as specified
 		 * by the {@code Allow} header.
-		 *
 		 * @param allowedMethods the allowed methods
 		 * @return this builder
 		 * @see HttpHeaders#setAllow(Set)
@@ -328,7 +331,7 @@ public interface ServerResponse {
 		B cacheControl(CacheControl cacheControl);
 
 		/**
-		 * Configure one or more request header names (e.g. "Accept-Language") to
+		 * Configure one or more request header names (for example, "Accept-Language") to
 		 * add to the "Vary" response header to inform clients that the response is
 		 * subject to content negotiation and variances based on the value of the
 		 * given request headers. The configured request header names are added only
@@ -408,6 +411,20 @@ public interface ServerResponse {
 		 * @since 5.2
 		 */
 		Mono<ServerResponse> bodyValue(Object body);
+
+		/**
+		 * Set the body of the response to the given {@code Object} and return it.
+		 * This is a shortcut for using a {@link #body(BodyInserter)} with a
+		 * {@linkplain BodyInserters#fromValue value inserter}.
+		 * @param body the body of the response
+		 * @param bodyType the type of the body, used to capture the generic type
+		 * @param <T> the type of the body
+		 * @return the built response
+		 * @throws IllegalArgumentException if {@code body} is a
+		 * {@link Publisher} or producer known to {@link ReactiveAdapterRegistry}
+		 * @since 6.2
+		 */
+		<T> Mono<ServerResponse> bodyValue(T body, ParameterizedTypeReference<T> bodyType);
 
 		/**
 		 * Set the body from the given {@code Publisher}. Shortcut for

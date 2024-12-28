@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,9 +26,8 @@ import java.util.Spliterator;
 import java.util.function.Consumer;
 
 import io.r2dbc.spi.Statement;
+import org.jspecify.annotations.Nullable;
 
-import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
@@ -100,6 +99,7 @@ public class Bindings implements Iterable<Bindings.Binding> {
 	 * Exceptions thrown by the action are relayed to the
 	 * @param action the action to be performed for each {@link Binding}
 	 */
+	@Override
 	public void forEach(Consumer<? super Binding> action) {
 		this.bindings.forEach((marker, binding) -> action.accept(binding));
 	}
@@ -166,7 +166,7 @@ public class Bindings implements Iterable<Bindings.Binding> {
 
 		/**
 		 * Return whether the binding is empty.
-		 * @return {@code true} if this is is a {@code NULL} binding
+		 * @return {@code true} if this is a {@code NULL} binding
 		 */
 		public boolean isNull() {
 			return !hasValue();
@@ -177,8 +177,7 @@ public class Bindings implements Iterable<Bindings.Binding> {
 		 * @return the value of this binding
 		 * (can be {@code null} if this is a {@code NULL} binding)
 		 */
-		@Nullable
-		public abstract Object getValue();
+		public abstract @Nullable Object getValue();
 
 		/**
 		 * Apply the binding to a {@link BindTarget}.
@@ -206,7 +205,6 @@ public class Bindings implements Iterable<Bindings.Binding> {
 		}
 
 		@Override
-		@NonNull
 		public Object getValue() {
 			return this.value;
 		}
@@ -236,8 +234,7 @@ public class Bindings implements Iterable<Bindings.Binding> {
 		}
 
 		@Override
-		@Nullable
-		public Object getValue() {
+		public @Nullable Object getValue() {
 			return null;
 		}
 

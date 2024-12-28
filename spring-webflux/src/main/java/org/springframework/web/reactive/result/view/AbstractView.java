@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -37,7 +38,6 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.ReactiveAdapter;
 import org.springframework.core.ReactiveAdapterRegistry;
 import org.springframework.http.MediaType;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.reactive.BindingContext;
@@ -65,14 +65,11 @@ public abstract class AbstractView implements View, BeanNameAware, ApplicationCo
 
 	private Charset defaultCharset = StandardCharsets.UTF_8;
 
-	@Nullable
-	private String requestContextAttribute;
+	private @Nullable String requestContextAttribute;
 
-	@Nullable
-	private String beanName;
+	private @Nullable String beanName;
 
-	@Nullable
-	private ApplicationContext applicationContext;
+	private @Nullable ApplicationContext applicationContext;
 
 
 	public AbstractView() {
@@ -132,8 +129,7 @@ public abstract class AbstractView implements View, BeanNameAware, ApplicationCo
 	/**
 	 * Get the name of the {@code RequestContext} attribute for this view, if any.
 	 */
-	@Nullable
-	public String getRequestContextAttribute() {
+	public @Nullable String getRequestContextAttribute() {
 		return this.requestContextAttribute;
 	}
 
@@ -150,8 +146,7 @@ public abstract class AbstractView implements View, BeanNameAware, ApplicationCo
 	 * Get the view's name.
 	 * <p>Should never be {@code null} if the view was correctly configured.
 	 */
-	@Nullable
-	public String getBeanName() {
+	public @Nullable String getBeanName() {
 		return this.beanName;
 	}
 
@@ -160,8 +155,7 @@ public abstract class AbstractView implements View, BeanNameAware, ApplicationCo
 		this.applicationContext = applicationContext;
 	}
 
-	@Nullable
-	public ApplicationContext getApplicationContext() {
+	public @Nullable ApplicationContext getApplicationContext() {
 		return this.applicationContext;
 	}
 
@@ -230,9 +224,7 @@ public abstract class AbstractView implements View, BeanNameAware, ApplicationCo
 			attributes = new ConcurrentHashMap<>(0);
 		}
 
-		//noinspection deprecation
-		return resolveAsyncAttributes(attributes)
-				.then(resolveAsyncAttributes(attributes, exchange))
+		return resolveAsyncAttributes(attributes, exchange)
 				.doOnTerminate(() -> exchange.getAttributes().remove(BINDING_CONTEXT_ATTRIBUTE))
 				.thenReturn(attributes);
 	}
@@ -249,7 +241,7 @@ public abstract class AbstractView implements View, BeanNameAware, ApplicationCo
 	protected Mono<Void> resolveAsyncAttributes(Map<String, Object> model, ServerWebExchange exchange) {
 		List<Mono<?>> asyncAttributes = null;
 		for (Map.Entry<String, ?> entry : model.entrySet()) {
-			Object value =  entry.getValue();
+			Object value = entry.getValue();
 			if (value == null) {
 				continue;
 			}
@@ -294,22 +286,6 @@ public abstract class AbstractView implements View, BeanNameAware, ApplicationCo
 	}
 
 	/**
-	 * Use the configured {@link ReactiveAdapterRegistry} to adapt asynchronous
-	 * attributes to {@code Mono<T>} or {@code Mono<List<T>>} and then wait to
-	 * resolve them into actual values. When the returned {@code Mono<Void>}
-	 * completes, the asynchronous attributes in the model would have been
-	 * replaced with their corresponding resolved values.
-	 * @return result {@code Mono} that completes when the model is ready
-	 * @deprecated as of 5.1.8 this method is still invoked but it is a no-op.
-	 * Please use {@link #resolveAsyncAttributes(Map, ServerWebExchange)}
-	 * instead. It is invoked after this one and does the actual work.
-	 */
-	@Deprecated
-	protected Mono<Void> resolveAsyncAttributes(Map<String, Object> model) {
-		return Mono.empty();
-	}
-
-	/**
 	 * Create a {@link RequestContext} to expose under the
 	 * {@linkplain #setRequestContextAttribute specified attribute name}.
 	 * <p>The default implementation creates a standard {@code RequestContext}
@@ -333,8 +309,7 @@ public abstract class AbstractView implements View, BeanNameAware, ApplicationCo
 	 * @return the {@code RequestDataValueProcessor}, or {@code null} if there is
 	 * none in the application context
 	 */
-	@Nullable
-	protected RequestDataValueProcessor getRequestDataValueProcessor() {
+	protected @Nullable RequestDataValueProcessor getRequestDataValueProcessor() {
 		ApplicationContext context = getApplicationContext();
 		if (context != null && context.containsBean(REQUEST_DATA_VALUE_PROCESSOR_BEAN_NAME)) {
 			return context.getBean(REQUEST_DATA_VALUE_PROCESSOR_BEAN_NAME, RequestDataValueProcessor.class);

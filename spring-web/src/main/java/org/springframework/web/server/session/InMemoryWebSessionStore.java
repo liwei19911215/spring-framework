@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import reactor.core.publisher.Mono;
@@ -81,7 +82,7 @@ public class InMemoryWebSessionStore implements WebSessionStore {
 	 * Configure the {@link Clock} to use to set lastAccessTime on every created
 	 * session and to calculate if it is expired.
 	 * <p>This may be useful to align to different timezone or to set the clock
-	 * back in a test, e.g. {@code Clock.offset(clock, Duration.ofMinutes(-31))}
+	 * back in a test, for example, {@code Clock.offset(clock, Duration.ofMinutes(-31))}
 	 * in order to simulate session expiration.
 	 * <p>By default this is {@code Clock.system(ZoneId.of("GMT"))}.
 	 * @param clock the clock to use
@@ -118,7 +119,8 @@ public class InMemoryWebSessionStore implements WebSessionStore {
 		this.expiredSessionChecker.checkIfNecessary(now);
 
 		return Mono.<WebSession>fromSupplier(() -> new InMemoryWebSession(now))
-				.subscribeOn(Schedulers.boundedElastic());
+				.subscribeOn(Schedulers.boundedElastic())
+				.publishOn(Schedulers.parallel());
 	}
 
 	@Override
@@ -187,6 +189,7 @@ public class InMemoryWebSessionStore implements WebSessionStore {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway") // Dataflow analysis limitation
 		public String getId() {
 			return this.id.get();
 		}
@@ -222,18 +225,24 @@ public class InMemoryWebSessionStore implements WebSessionStore {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway") // Dataflow analysis limitation
 		public boolean isStarted() {
 			return this.state.get().equals(State.STARTED) || !getAttributes().isEmpty();
 		}
 
 		@Override
 		public Mono<Void> changeSessionId() {
-			String currentId = this.id.get();
-			InMemoryWebSessionStore.this.sessions.remove(currentId);
-			String newId = String.valueOf(idGenerator.generateId());
-			this.id.set(newId);
-			InMemoryWebSessionStore.this.sessions.put(this.getId(), this);
-			return Mono.empty();
+			return Mono.<Void>defer(() -> {
+						String currentId = this.id.get();
+						InMemoryWebSessionStore.this.sessions.remove(currentId);
+						String newId = String.valueOf(idGenerator.generateId());
+						this.id.set(newId);
+						InMemoryWebSessionStore.this.sessions.put(this.getId(), this);
+						return Mono.empty();
+					})
+					.subscribeOn(Schedulers.boundedElastic())
+					.publishOn(Schedulers.parallel())
+					.then();
 		}
 
 		@Override
@@ -245,6 +254,7 @@ public class InMemoryWebSessionStore implements WebSessionStore {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway") // Dataflow analysis limitation
 		public Mono<Void> save() {
 
 			checkMaxSessionsLimit();
@@ -282,6 +292,7 @@ public class InMemoryWebSessionStore implements WebSessionStore {
 			return isExpired(clock.instant());
 		}
 
+		@SuppressWarnings("NullAway") // Dataflow analysis limitation
 		private boolean isExpired(Instant now) {
 			if (this.state.get().equals(State.EXPIRED)) {
 				return true;
@@ -309,11 +320,9 @@ public class InMemoryWebSessionStore implements WebSessionStore {
 		/** Max time between expiration checks. */
 		private static final int CHECK_PERIOD = 60 * 1000;
 
-
-		private final ReentrantLock lock = new ReentrantLock();
+		private final Lock lock = new ReentrantLock();
 
 		private Instant checkTime = clock.instant().plus(CHECK_PERIOD, ChronoUnit.MILLIS);
-
 
 		public void checkIfNecessary(Instant now) {
 			if (this.checkTime.isBefore(now)) {

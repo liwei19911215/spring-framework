@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,19 +25,21 @@ import java.util.Collections;
 import java.util.Properties;
 import java.util.stream.Stream;
 
-import javax.servlet.http.HttpServletRequest;
-
+import jakarta.servlet.http.HttpServletRequest;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Named;
 
 import org.springframework.beans.DirectFieldAccessor;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
+import org.springframework.core.annotation.AliasFor;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.env.PropertiesPropertySource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.RequestPath;
-import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -46,20 +48,21 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.context.support.StaticWebApplicationContext;
 import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.PreFlightRequestHandler;
 import org.springframework.web.servlet.HandlerExecutionChain;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.handler.PathPatternsParameterizedTest;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
 import org.springframework.web.util.ServletRequestPathUtils;
-import org.springframework.web.util.pattern.PathPatternParser;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.junit.jupiter.api.Named.named;
 
 /**
- * Test fixture for {@link CrossOrigin @CrossOrigin} annotated methods.
+ * Tests for {@link CrossOrigin @CrossOrigin} annotated methods.
  *
  * @author Sebastien Deleuze
  * @author Sam Brannen
@@ -69,7 +72,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 class CrossOriginTests {
 
 	@SuppressWarnings("unused")
-	static Stream<TestRequestMappingInfoHandlerMapping> pathPatternsArguments() {
+	static Stream<Named<TestRequestMappingInfoHandlerMapping>> pathPatternsArguments() {
 		StaticWebApplicationContext wac = new StaticWebApplicationContext();
 		Properties props = new Properties();
 		props.setProperty("myOrigin", "https://example.com");
@@ -79,14 +82,14 @@ class CrossOriginTests {
 		wac.refresh();
 
 		TestRequestMappingInfoHandlerMapping mapping1 = new TestRequestMappingInfoHandlerMapping();
-		mapping1.setPatternParser(new PathPatternParser());
 		wac.getAutowireCapableBeanFactory().initializeBean(mapping1, "mapping1");
 
 		TestRequestMappingInfoHandlerMapping mapping2 = new TestRequestMappingInfoHandlerMapping();
+		mapping2.setPatternParser(null);
 		wac.getAutowireCapableBeanFactory().initializeBean(mapping2, "mapping2");
 		wac.close();
 
-		return Stream.of(mapping1, mapping2);
+		return Stream.of(named("PathPatternParser", mapping1), named("AntPathMatcher", mapping2));
 	}
 
 
@@ -127,7 +130,7 @@ class CrossOriginTests {
 		request.addHeader(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET");
 		HandlerExecutionChain chain = mapping.getHandler(request);
 		assertThat(chain).isNotNull();
-		assertThat(chain.getHandler().getClass().getName()).endsWith("AbstractHandlerMapping$PreFlightHandler");
+		assertThat(chain.getHandler()).isInstanceOf(PreFlightRequestHandler.class);
 	}
 
 	@PathPatternsParameterizedTest  // SPR-12931
@@ -159,7 +162,7 @@ class CrossOriginTests {
 		assertThat(config.getAllowCredentials()).isNull();
 		assertThat(config.getAllowedHeaders()).containsExactly("*");
 		assertThat(CollectionUtils.isEmpty(config.getExposedHeaders())).isTrue();
-		assertThat(config.getMaxAge()).isEqualTo(new Long(1800));
+		assertThat(config.getMaxAge()).isEqualTo(Long.valueOf(1800));
 	}
 
 	@PathPatternsParameterizedTest
@@ -173,7 +176,7 @@ class CrossOriginTests {
 		assertThat(config.getAllowedOrigins()).containsExactly("https://site1.com", "https://site2.com");
 		assertThat(config.getAllowedHeaders()).containsExactly("header1", "header2");
 		assertThat(config.getExposedHeaders()).containsExactly("header3", "header4");
-		assertThat(config.getMaxAge()).isEqualTo(new Long(123));
+		assertThat(config.getMaxAge()).isEqualTo(Long.valueOf(123));
 		assertThat(config.getAllowCredentials()).isFalse();
 	}
 
@@ -284,7 +287,7 @@ class CrossOriginTests {
 		CorsConfiguration config = getCorsConfiguration(chain, false);
 		assertThat(config).isNotNull();
 		assertThat(config.getAllowedMethods()).containsExactly("GET");
-		assertThat(config.getAllowedOrigins()).containsExactly("http://www.foo.example/");
+		assertThat(config.getAllowedOrigins()).containsExactly("http://www.foo.example");
 		assertThat(config.getAllowCredentials()).isTrue();
 	}
 
@@ -297,7 +300,7 @@ class CrossOriginTests {
 		CorsConfiguration config = getCorsConfiguration(chain, false);
 		assertThat(config).isNotNull();
 		assertThat(config.getAllowedMethods()).containsExactly("GET");
-		assertThat(config.getAllowedOrigins()).containsExactly("http://www.foo.example/");
+		assertThat(config.getAllowedOrigins()).containsExactly("http://www.foo.example");
 		assertThat(config.getAllowCredentials()).isTrue();
 	}
 
@@ -315,7 +318,7 @@ class CrossOriginTests {
 		assertThat(config.getAllowCredentials()).isNull();
 		assertThat(config.getAllowedHeaders()).containsExactly("*");
 		assertThat(CollectionUtils.isEmpty(config.getExposedHeaders())).isTrue();
-		assertThat(config.getMaxAge()).isEqualTo(new Long(1800));
+		assertThat(config.getMaxAge()).isEqualTo(Long.valueOf(1800));
 	}
 
 	@PathPatternsParameterizedTest
@@ -362,13 +365,33 @@ class CrossOriginTests {
 		assertThat(mapping.getHandler(request)).isNull();
 	}
 
+	@PathPatternsParameterizedTest
+	void maxAgeWithDefaultOrigin(TestRequestMappingInfoHandlerMapping mapping) throws Exception {
+		mapping.registerHandler(new MaxAgeWithDefaultOriginController());
 
-	@Nullable
-	private CorsConfiguration getCorsConfiguration(@Nullable HandlerExecutionChain chain, boolean isPreFlightRequest) {
+		this.request.setRequestURI("/classAge");
+		HandlerExecutionChain chain = mapping.getHandler(request);
+		CorsConfiguration config = getCorsConfiguration(chain, false);
+		assertThat(config).isNotNull();
+		assertThat(config.getAllowedMethods()).containsExactly("GET");
+		assertThat(config.getAllowedOrigins()).containsExactly("*");
+		assertThat(config.getMaxAge()).isEqualTo(10);
+
+		this.request.setRequestURI("/methodAge");
+		chain = mapping.getHandler(request);
+		config = getCorsConfiguration(chain, false);
+		assertThat(config).isNotNull();
+		assertThat(config.getAllowedMethods()).containsExactly("GET");
+		assertThat(config.getAllowedOrigins()).containsExactly("*");
+		assertThat(config.getMaxAge()).isEqualTo(100);
+	}
+
+
+	private @Nullable CorsConfiguration getCorsConfiguration(@Nullable HandlerExecutionChain chain, boolean isPreFlightRequest) {
 		assertThat(chain).isNotNull();
 		if (isPreFlightRequest) {
 			Object handler = chain.getHandler();
-			assertThat(handler.getClass().getSimpleName().equals("PreFlightHandler")).isTrue();
+			assertThat(handler).isInstanceOf(PreFlightRequestHandler.class);
 			DirectFieldAccessor accessor = new DirectFieldAccessor(handler);
 			return (CorsConfiguration)accessor.getPropertyValue("config");
 		}
@@ -490,6 +513,20 @@ class CrossOriginTests {
 		}
 	}
 
+	@Controller
+	@CrossOrigin(maxAge = 10)
+	private static class MaxAgeWithDefaultOriginController {
+
+		@CrossOrigin
+		@GetMapping("/classAge")
+		void classAge() {
+		}
+
+		@CrossOrigin(maxAge = 100)
+		@GetMapping("/methodAge")
+		void methodAge() {
+		}
+	}
 
 	@Controller
 	@CrossOrigin(allowCredentials = "true")
@@ -517,8 +554,10 @@ class CrossOriginTests {
 	@CrossOrigin
 	private @interface ComposedCrossOrigin {
 
+		@AliasFor(annotation = CrossOrigin.class)
 		String[] origins() default {};
 
+		@AliasFor(annotation = CrossOrigin.class)
 		String allowCredentials() default "";
 	}
 
@@ -530,8 +569,6 @@ class CrossOriginTests {
 		@RequestMapping(path = "/foo", method = RequestMethod.GET)
 		public void foo() {
 		}
-
-
 	}
 
 
@@ -556,13 +593,14 @@ class CrossOriginTests {
 			return AnnotationUtils.findAnnotation(beanType, Controller.class) != null;
 		}
 
+		@SuppressWarnings("removal")
 		@Override
 		protected RequestMappingInfo getMappingForMethod(Method method, Class<?> handlerType) {
 			RequestMapping annotation = AnnotatedElementUtils.findMergedAnnotation(method, RequestMapping.class);
 			if (annotation != null) {
 				RequestMappingInfo.BuilderConfiguration options = new RequestMappingInfo.BuilderConfiguration();
-				if (getPatternParser() != null) {
-					options.setPatternParser(getPatternParser());
+				if (getPatternParser() == null) {
+					options.setPathMatcher(new AntPathMatcher());
 				}
 				return RequestMappingInfo.paths(annotation.value())
 						.methods(annotation.method())
@@ -586,6 +624,11 @@ class CrossOriginTests {
 				return requestPath.pathWithinApplication().value();
 			}
 			return super.initLookupPath(request);
+		}
+
+		@Override
+		public String toString() {
+			return "PatternParser = " + (getPatternParser() != null ? getPatternParser().getClass().getSimpleName() : null) ;
 		}
 	}
 

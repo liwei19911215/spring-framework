@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,13 +22,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
-import org.springframework.lang.Nullable;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.method.ControllerAdviceBean;
 
@@ -61,8 +62,8 @@ class RequestResponseBodyAdviceChain implements RequestBodyAdvice, ResponseBodyA
 		if (requestResponseBodyAdvice != null) {
 			List<T> result = new ArrayList<>();
 			for (Object advice : requestResponseBodyAdvice) {
-				Class<?> beanType = (advice instanceof ControllerAdviceBean ?
-						((ControllerAdviceBean) advice).getBeanType() : advice.getClass());
+				Class<?> beanType = (advice instanceof ControllerAdviceBean adviceBean ?
+						adviceBean.getBeanType() : advice.getClass());
 				if (beanType != null && adviceType.isAssignableFrom(beanType)) {
 					result.add((T) advice);
 				}
@@ -108,8 +109,7 @@ class RequestResponseBodyAdviceChain implements RequestBodyAdvice, ResponseBodyA
 	}
 
 	@Override
-	@Nullable
-	public Object beforeBodyWrite(@Nullable Object body, MethodParameter returnType, MediaType contentType,
+	public @Nullable Object beforeBodyWrite(@Nullable Object body, MethodParameter returnType, MediaType contentType,
 			Class<? extends HttpMessageConverter<?>> converterType,
 			ServerHttpRequest request, ServerHttpResponse response) {
 
@@ -117,8 +117,7 @@ class RequestResponseBodyAdviceChain implements RequestBodyAdvice, ResponseBodyA
 	}
 
 	@Override
-	@Nullable
-	public Object handleEmptyBody(@Nullable Object body, HttpInputMessage inputMessage, MethodParameter parameter,
+	public @Nullable Object handleEmptyBody(@Nullable Object body, HttpInputMessage inputMessage, MethodParameter parameter,
 			Type targetType, Class<? extends HttpMessageConverter<?>> converterType) {
 
 		for (RequestBodyAdvice advice : getMatchingAdvice(parameter, RequestBodyAdvice.class)) {
@@ -131,8 +130,7 @@ class RequestResponseBodyAdviceChain implements RequestBodyAdvice, ResponseBodyA
 
 
 	@SuppressWarnings("unchecked")
-	@Nullable
-	private <T> Object processBody(@Nullable Object body, MethodParameter returnType, MediaType contentType,
+	private <T> @Nullable Object processBody(@Nullable Object body, MethodParameter returnType, MediaType contentType,
 			Class<? extends HttpMessageConverter<?>> converterType,
 			ServerHttpRequest request, ServerHttpResponse response) {
 
@@ -153,8 +151,7 @@ class RequestResponseBodyAdviceChain implements RequestBodyAdvice, ResponseBodyA
 		}
 		List<A> result = new ArrayList<>(availableAdvice.size());
 		for (Object advice : availableAdvice) {
-			if (advice instanceof ControllerAdviceBean) {
-				ControllerAdviceBean adviceBean = (ControllerAdviceBean) advice;
+			if (advice instanceof ControllerAdviceBean adviceBean) {
 				if (!adviceBean.isApplicableToBeanType(parameter.getContainingClass())) {
 					continue;
 				}

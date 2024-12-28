@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.Properties;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Static holder for local Spring properties, i.e. defined at the Spring library level.
@@ -36,21 +33,24 @@ import org.springframework.lang.Nullable;
  *
  * <p>This is an alternative way to set Spring-related system properties such as
  * "spring.getenv.ignore" and "spring.beaninfo.ignore", in particular for scenarios
- * where JVM system properties are locked on the target platform (e.g. WebSphere).
+ * where JVM system properties are locked on the target platform (for example, WebSphere).
  * See {@link #setFlag} for a convenient way to locally set such flags to "true".
  *
  * @author Juergen Hoeller
  * @since 3.2.7
+ * @see org.springframework.beans.StandardBeanInfoFactory#IGNORE_BEANINFO_PROPERTY_NAME
  * @see org.springframework.core.env.AbstractEnvironment#IGNORE_GETENV_PROPERTY_NAME
- * @see org.springframework.beans.CachedIntrospectionResults#IGNORE_BEANINFO_PROPERTY_NAME
+ * @see org.springframework.expression.spel.SpelParserConfiguration#SPRING_EXPRESSION_COMPILER_MODE_PROPERTY_NAME
  * @see org.springframework.jdbc.core.StatementCreatorUtils#IGNORE_GETPARAMETERTYPE_PROPERTY_NAME
+ * @see org.springframework.jndi.JndiLocatorDelegate#IGNORE_JNDI_PROPERTY_NAME
+ * @see org.springframework.objenesis.SpringObjenesis#IGNORE_OBJENESIS_PROPERTY_NAME
+ * @see org.springframework.test.context.NestedTestConfiguration#ENCLOSING_CONFIGURATION_PROPERTY_NAME
+ * @see org.springframework.test.context.TestConstructor#TEST_CONSTRUCTOR_AUTOWIRE_MODE_PROPERTY_NAME
  * @see org.springframework.test.context.cache.ContextCache#MAX_CONTEXT_CACHE_SIZE_PROPERTY_NAME
  */
 public final class SpringProperties {
 
 	private static final String PROPERTIES_RESOURCE_LOCATION = "spring.properties";
-
-	private static final Log logger = LogFactory.getLog(SpringProperties.class);
 
 	private static final Properties localProperties = new Properties();
 
@@ -61,16 +61,13 @@ public final class SpringProperties {
 			URL url = (cl != null ? cl.getResource(PROPERTIES_RESOURCE_LOCATION) :
 					ClassLoader.getSystemResource(PROPERTIES_RESOURCE_LOCATION));
 			if (url != null) {
-				logger.debug("Found 'spring.properties' file in local classpath");
 				try (InputStream is = url.openStream()) {
 					localProperties.load(is);
 				}
 			}
 		}
 		catch (IOException ex) {
-			if (logger.isInfoEnabled()) {
-				logger.info("Could not load 'spring.properties' file from local classpath: " + ex);
-			}
+			System.err.println("Could not load 'spring.properties' file from local classpath: " + ex);
 		}
 	}
 
@@ -100,17 +97,14 @@ public final class SpringProperties {
 	 * @param key the property key
 	 * @return the associated property value, or {@code null} if none found
 	 */
-	@Nullable
-	public static String getProperty(String key) {
+	public static @Nullable String getProperty(String key) {
 		String value = localProperties.getProperty(key);
 		if (value == null) {
 			try {
 				value = System.getProperty(key);
 			}
 			catch (Throwable ex) {
-				if (logger.isDebugEnabled()) {
-					logger.debug("Could not retrieve system property '" + key + "': " + ex);
-				}
+				System.err.println("Could not retrieve system property '" + key + "': " + ex);
 			}
 		}
 		return value;

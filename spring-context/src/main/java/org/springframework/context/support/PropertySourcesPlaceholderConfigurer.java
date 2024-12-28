@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,19 +19,22 @@ package org.springframework.context.support;
 import java.io.IOException;
 import java.util.Properties;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.PlaceholderConfigurerSupport;
 import org.springframework.context.EnvironmentAware;
+import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.ConfigurablePropertyResolver;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertiesPropertySource;
+import org.springframework.core.env.PropertyResolver;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.env.PropertySources;
 import org.springframework.core.env.PropertySourcesPropertyResolver;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringValueResolver;
 
@@ -46,7 +49,7 @@ import org.springframework.util.StringValueResolver;
  * {@code PropertyPlaceholderConfigurer} to ensure backward compatibility. See the spring-context
  * XSD documentation for complete details.
  *
- * <p>Any local properties (e.g. those added via {@link #setProperties}, {@link #setLocations}
+ * <p>Any local properties (for example, those added via {@link #setProperties}, {@link #setLocations}
  * et al.) are added as a {@code PropertySource}. Search precedence of local properties is
  * based on the value of the {@link #setLocalOverride localOverride} property, which is by
  * default {@code false} meaning that local properties are to be searched last, after all
@@ -57,6 +60,7 @@ import org.springframework.util.StringValueResolver;
  *
  * @author Chris Beams
  * @author Juergen Hoeller
+ * @author Sam Brannen
  * @since 3.1
  * @see org.springframework.core.env.ConfigurableEnvironment
  * @see org.springframework.beans.factory.config.PlaceholderConfigurerSupport
@@ -77,14 +81,11 @@ public class PropertySourcesPlaceholderConfigurer extends PlaceholderConfigurerS
 	public static final String ENVIRONMENT_PROPERTIES_PROPERTY_SOURCE_NAME = "environmentProperties";
 
 
-	@Nullable
-	private MutablePropertySources propertySources;
+	private @Nullable MutablePropertySources propertySources;
 
-	@Nullable
-	private PropertySources appliedPropertySources;
+	private @Nullable PropertySources appliedPropertySources;
 
-	@Nullable
-	private Environment environment;
+	private @Nullable Environment environment;
 
 
 	/**
@@ -129,12 +130,24 @@ public class PropertySourcesPlaceholderConfigurer extends PlaceholderConfigurerS
 		if (this.propertySources == null) {
 			this.propertySources = new MutablePropertySources();
 			if (this.environment != null) {
+				PropertyResolver propertyResolver = this.environment;
+				// If the ignoreUnresolvablePlaceholders flag is set to true, we have to create a
+				// local PropertyResolver to enforce that setting, since the Environment is most
+				// likely not configured with ignoreUnresolvablePlaceholders set to true.
+				// See https://github.com/spring-projects/spring-framework/issues/27947
+				if (this.ignoreUnresolvablePlaceholders &&
+						(this.environment instanceof ConfigurableEnvironment configurableEnvironment)) {
+					PropertySourcesPropertyResolver resolver =
+							new PropertySourcesPropertyResolver(configurableEnvironment.getPropertySources());
+					resolver.setIgnoreUnresolvableNestedPlaceholders(true);
+					propertyResolver = resolver;
+				}
+				PropertyResolver propertyResolverToUse = propertyResolver;
 				this.propertySources.addLast(
-					new PropertySource<Environment>(ENVIRONMENT_PROPERTIES_PROPERTY_SOURCE_NAME, this.environment) {
+					new PropertySource<>(ENVIRONMENT_PROPERTIES_PROPERTY_SOURCE_NAME, this.environment) {
 						@Override
-						@Nullable
-						public String getProperty(String key) {
-							return this.source.getProperty(key);
+						public @Nullable String getProperty(String key) {
+							return propertyResolverToUse.getProperty(key);
 						}
 					}
 				);
@@ -154,8 +167,17 @@ public class PropertySourcesPlaceholderConfigurer extends PlaceholderConfigurerS
 			}
 		}
 
-		processProperties(beanFactory, new PropertySourcesPropertyResolver(this.propertySources));
+		processProperties(beanFactory, createPropertyResolver(this.propertySources));
 		this.appliedPropertySources = this.propertySources;
+	}
+
+	/**
+	 * Create a {@link ConfigurablePropertyResolver} for the specified property sources.
+	 * @param propertySources the property sources to use
+	 * @since 6.0.12
+	 */
+	protected ConfigurablePropertyResolver createPropertyResolver(MutablePropertySources propertySources){
+		return new PropertySourcesPropertyResolver(propertySources);
 	}
 
 	/**
@@ -168,6 +190,7 @@ public class PropertySourcesPlaceholderConfigurer extends PlaceholderConfigurerS
 		propertyResolver.setPlaceholderPrefix(this.placeholderPrefix);
 		propertyResolver.setPlaceholderSuffix(this.placeholderSuffix);
 		propertyResolver.setValueSeparator(this.valueSeparator);
+		propertyResolver.setEscapeCharacter(this.escapeCharacter);
 
 		StringValueResolver valueResolver = strVal -> {
 			String resolved = (this.ignoreUnresolvablePlaceholders ?
@@ -185,9 +208,9 @@ public class PropertySourcesPlaceholderConfigurer extends PlaceholderConfigurerS
 	/**
 	 * Implemented for compatibility with
 	 * {@link org.springframework.beans.factory.config.PlaceholderConfigurerSupport}.
+	 * @throws UnsupportedOperationException in this implementation
 	 * @deprecated in favor of
 	 * {@link #processProperties(ConfigurableListableBeanFactory, ConfigurablePropertyResolver)}
-	 * @throws UnsupportedOperationException in this implementation
 	 */
 	@Override
 	@Deprecated

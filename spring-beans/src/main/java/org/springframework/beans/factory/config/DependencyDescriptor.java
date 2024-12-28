@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,12 @@ import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.util.Map;
 import java.util.Optional;
 
 import kotlin.reflect.KProperty;
 import kotlin.reflect.jvm.ReflectJvmMapping;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
@@ -38,7 +37,6 @@ import org.springframework.core.MethodParameter;
 import org.springframework.core.ParameterNameDiscoverer;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.convert.TypeDescriptor;
-import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
 
 /**
@@ -54,16 +52,13 @@ public class DependencyDescriptor extends InjectionPoint implements Serializable
 
 	private final Class<?> declaringClass;
 
-	@Nullable
-	private String methodName;
+	private @Nullable String methodName;
 
-	@Nullable
-	private Class<?>[] parameterTypes;
+	private Class<?> @Nullable [] parameterTypes;
 
 	private int parameterIndex;
 
-	@Nullable
-	private String fieldName;
+	private @Nullable String fieldName;
 
 	private final boolean required;
 
@@ -71,14 +66,11 @@ public class DependencyDescriptor extends InjectionPoint implements Serializable
 
 	private int nestingLevel = 1;
 
-	@Nullable
-	private Class<?> containingClass;
+	private @Nullable Class<?> containingClass;
 
-	@Nullable
-	private transient volatile ResolvableType resolvableType;
+	private transient volatile @Nullable ResolvableType resolvableType;
 
-	@Nullable
-	private transient volatile TypeDescriptor typeDescriptor;
+	private transient volatile @Nullable TypeDescriptor typeDescriptor;
 
 
 	/**
@@ -150,10 +142,10 @@ public class DependencyDescriptor extends InjectionPoint implements Serializable
 		this.parameterTypes = original.parameterTypes;
 		this.parameterIndex = original.parameterIndex;
 		this.fieldName = original.fieldName;
-		this.containingClass = original.containingClass;
 		this.required = original.required;
 		this.eager = original.eager;
 		this.nestingLevel = original.nestingLevel;
+		this.containingClass = original.containingClass;
 	}
 
 
@@ -182,7 +174,7 @@ public class DependencyDescriptor extends InjectionPoint implements Serializable
 
 	/**
 	 * Check whether the underlying field is annotated with any variant of a
-	 * {@code Nullable} annotation, e.g. {@code javax.annotation.Nullable} or
+	 * {@code Nullable} annotation, for example, {@code jakarta.annotation.Nullable} or
 	 * {@code edu.umd.cs.findbugs.annotations.Nullable}.
 	 */
 	private boolean hasNullableAnnotation() {
@@ -215,28 +207,7 @@ public class DependencyDescriptor extends InjectionPoint implements Serializable
 	 * @throws BeansException in case of the not-unique scenario being fatal
 	 * @since 5.1
 	 */
-	@Nullable
-	public Object resolveNotUnique(ResolvableType type, Map<String, Object> matchingBeans) throws BeansException {
-		throw new NoUniqueBeanDefinitionException(type, matchingBeans.keySet());
-	}
-
-	/**
-	 * Resolve the specified not-unique scenario: by default,
-	 * throwing a {@link NoUniqueBeanDefinitionException}.
-	 * <p>Subclasses may override this to select one of the instances or
-	 * to opt out with no result at all through returning {@code null}.
-	 * @param type the requested bean type
-	 * @param matchingBeans a map of bean names and corresponding bean
-	 * instances which have been pre-selected for the given type
-	 * (qualifiers etc already applied)
-	 * @return a bean instance to proceed with, or {@code null} for none
-	 * @throws BeansException in case of the not-unique scenario being fatal
-	 * @since 4.3
-	 * @deprecated as of 5.1, in favor of {@link #resolveNotUnique(ResolvableType, Map)}
-	 */
-	@Deprecated
-	@Nullable
-	public Object resolveNotUnique(Class<?> type, Map<String, Object> matchingBeans) throws BeansException {
+	public @Nullable Object resolveNotUnique(ResolvableType type, Map<String, Object> matchingBeans) throws BeansException {
 		throw new NoUniqueBeanDefinitionException(type, matchingBeans.keySet());
 	}
 
@@ -252,8 +223,7 @@ public class DependencyDescriptor extends InjectionPoint implements Serializable
 	 * @throws BeansException if the shortcut could not be obtained
 	 * @since 4.3.1
 	 */
-	@Nullable
-	public Object resolveShortcut(BeanFactory beanFactory) throws BeansException {
+	public @Nullable Object resolveShortcut(BeanFactory beanFactory) throws BeansException {
 		return null;
 	}
 
@@ -354,6 +324,10 @@ public class DependencyDescriptor extends InjectionPoint implements Serializable
 			public boolean fallbackMatchAllowed() {
 				return true;
 			}
+			@Override
+			public boolean usesStandardBeanLookup() {
+				return true;
+			}
 		};
 	}
 
@@ -373,8 +347,7 @@ public class DependencyDescriptor extends InjectionPoint implements Serializable
 	 * Determine the name of the wrapped parameter/field.
 	 * @return the declared name (may be {@code null} if unresolvable)
 	 */
-	@Nullable
-	public String getDependencyName() {
+	public @Nullable String getDependencyName() {
 		return (this.field != null ? this.field.getName() : obtainMethodParameter().getParameterName());
 	}
 
@@ -385,23 +358,8 @@ public class DependencyDescriptor extends InjectionPoint implements Serializable
 	public Class<?> getDependencyType() {
 		if (this.field != null) {
 			if (this.nestingLevel > 1) {
-				Type type = this.field.getGenericType();
-				for (int i = 2; i <= this.nestingLevel; i++) {
-					if (type instanceof ParameterizedType) {
-						Type[] args = ((ParameterizedType) type).getActualTypeArguments();
-						type = args[args.length - 1];
-					}
-				}
-				if (type instanceof Class) {
-					return (Class<?>) type;
-				}
-				else if (type instanceof ParameterizedType) {
-					Type arg = ((ParameterizedType) type).getRawType();
-					if (arg instanceof Class) {
-						return (Class<?>) arg;
-					}
-				}
-				return Object.class;
+				Class<?> clazz = getResolvableType().getRawClass();
+				return (clazz != null ? clazz : Object.class);
 			}
 			else {
 				return this.field.getType();
@@ -410,6 +368,31 @@ public class DependencyDescriptor extends InjectionPoint implements Serializable
 		else {
 			return obtainMethodParameter().getNestedParameterType();
 		}
+	}
+
+	/**
+	 * Determine whether this dependency supports lazy resolution,
+	 * for example, through extra proxying. The default is {@code true}.
+	 * @since 6.1.2
+	 * @see org.springframework.beans.factory.support.AutowireCandidateResolver#getLazyResolutionProxyIfNecessary
+	 */
+	public boolean supportsLazyResolution() {
+		return true;
+	}
+
+	/**
+	 * Determine whether this descriptor uses a standard bean lookup
+	 * in {@link #resolveCandidate(String, Class, BeanFactory)} and
+	 * therefore qualifies for factory-level shortcut resolution.
+	 * <p>By default, the {@code DependencyDescriptor} class itself
+	 * uses a standard bean lookup but subclasses may override this.
+	 * If a subclass overrides other methods but preserves a standard
+	 * bean lookup, it may override this method to return {@code true}.
+	 * @since 6.2
+	 * @see #resolveCandidate(String, Class, BeanFactory)
+	 */
+	public boolean usesStandardBeanLookup() {
+		return (getClass() == DependencyDescriptor.class);
 	}
 
 
@@ -421,9 +404,9 @@ public class DependencyDescriptor extends InjectionPoint implements Serializable
 		if (!super.equals(other)) {
 			return false;
 		}
-		DependencyDescriptor otherDesc = (DependencyDescriptor) other;
-		return (this.required == otherDesc.required && this.eager == otherDesc.eager &&
-				this.nestingLevel == otherDesc.nestingLevel && this.containingClass == otherDesc.containingClass);
+		return (other instanceof DependencyDescriptor otherDesc && this.required == otherDesc.required &&
+				this.eager == otherDesc.eager && this.nestingLevel == otherDesc.nestingLevel &&
+				this.containingClass == otherDesc.containingClass);
 	}
 
 	@Override

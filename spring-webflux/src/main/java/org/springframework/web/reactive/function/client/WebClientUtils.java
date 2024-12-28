@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,23 @@
 
 package org.springframework.web.reactive.function.client;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
+import java.util.function.Predicate;
 
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import org.springframework.core.codec.CodecException;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 
 /**
- * Internal methods shared between {@link DefaultWebClient} and {@link DefaultClientResponse}.
+ * Internal methods shared between {@link DefaultWebClient} and
+ * {@link DefaultClientResponse}.
  *
  * @author Arjen Poutsma
  * @since 5.2
@@ -35,6 +41,12 @@ abstract class WebClientUtils {
 
 	private static final String VALUE_NONE = "\n\t\t\n\t\t\n\uE000\uE001\uE002\n\t\t\t\t\n";
 
+	/**
+	 * Predicate that returns true if an exception should be wrapped.
+	 */
+	public static final Predicate<? super Throwable> WRAP_EXCEPTION_PREDICATE =
+			t -> !(t instanceof WebClientException) && !(t instanceof CodecException);
+
 
 	/**
 	 * Map the given response to a single value {@code ResponseEntity<T>}.
@@ -42,9 +54,10 @@ abstract class WebClientUtils {
 	@SuppressWarnings("unchecked")
 	public static <T> Mono<ResponseEntity<T>> mapToEntity(ClientResponse response, Mono<T> bodyMono) {
 		return ((Mono<Object>) bodyMono).defaultIfEmpty(VALUE_NONE).map(body ->
-				ResponseEntity.status(response.rawStatusCode())
-						.headers(response.headers().asHttpHeaders())
-						.body(body != VALUE_NONE ? (T) body : null));
+				new ResponseEntity<>(
+						body != VALUE_NONE ? (T) body : null,
+						response.headers().asHttpHeaders(),
+						response.statusCode()));
 	}
 
 	/**
@@ -52,15 +65,23 @@ abstract class WebClientUtils {
 	 */
 	public static <T> Mono<ResponseEntity<List<T>>> mapToEntityList(ClientResponse response, Publisher<T> body) {
 		return Flux.from(body).collectList().map(list ->
-				ResponseEntity.status(response.rawStatusCode())
-						.headers(response.headers().asHttpHeaders())
-						.body(list));
+				new ResponseEntity<>(list, response.headers().asHttpHeaders(), response.statusCode()));
 	}
 
 	/**
-	 * Indicates whether the given exception should be wrapped.
+	 * Return a String representation of the request details for logging purposes.
+	 * @since 6.0.16
 	 */
-	public static boolean shouldWrapException(Throwable t) {
-		return !(t instanceof WebClientException) && !(t instanceof CodecException);
+	public static String getRequestDescription(HttpMethod httpMethod, URI uri) {
+		if (StringUtils.hasText(uri.getQuery())) {
+			try {
+				uri = new URI(uri.getScheme(), null, uri.getHost(), uri.getPort(), uri.getPath(), null, null);
+			}
+			catch (URISyntaxException ex) {
+				// ignore
+			}
+		}
+		return httpMethod.name() + " " + uri;
 	}
+
 }

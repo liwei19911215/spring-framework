@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 
@@ -38,12 +39,10 @@ import org.springframework.http.HttpRange;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.AbstractServerHttpRequest;
 import org.springframework.http.server.reactive.SslInfo;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MimeType;
 import org.springframework.util.MultiValueMap;
-import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
@@ -55,32 +54,22 @@ import org.springframework.web.util.UriComponentsBuilder;
  */
 public final class MockServerHttpRequest extends AbstractServerHttpRequest {
 
-	/**
-	 * String representation of one of {@link HttpMethod} or not empty custom method (e.g. <i>CONNECT</i>).
-	 */
-	private final String httpMethod;
-
 	private final MultiValueMap<String, HttpCookie> cookies;
 
-	@Nullable
-	private final InetSocketAddress localAddress;
+	private final @Nullable InetSocketAddress localAddress;
 
-	@Nullable
-	private final InetSocketAddress remoteAddress;
+	private final @Nullable InetSocketAddress remoteAddress;
 
-	@Nullable
-	private final SslInfo sslInfo;
+	private final @Nullable SslInfo sslInfo;
 
 	private final Flux<DataBuffer> body;
 
-	private MockServerHttpRequest(String httpMethod,
+	private MockServerHttpRequest(HttpMethod httpMethod,
 			URI uri, @Nullable String contextPath, HttpHeaders headers, MultiValueMap<String, HttpCookie> cookies,
 			@Nullable InetSocketAddress localAddress, @Nullable InetSocketAddress remoteAddress,
 			@Nullable SslInfo sslInfo, Publisher<? extends DataBuffer> body) {
 
-		super(uri, contextPath, headers);
-		Assert.isTrue(StringUtils.hasText(httpMethod), "HTTP method is required.");
-		this.httpMethod = httpMethod;
+		super(httpMethod, uri, contextPath, headers);
 		this.cookies = cookies;
 		this.localAddress = localAddress;
 		this.remoteAddress = remoteAddress;
@@ -90,31 +79,17 @@ public final class MockServerHttpRequest extends AbstractServerHttpRequest {
 
 
 	@Override
-	@Nullable
-	public HttpMethod getMethod() {
-		return HttpMethod.resolve(this.httpMethod);
-	}
-
-	@Override
-	public String getMethodValue() {
-		return this.httpMethod;
-	}
-
-	@Override
-	@Nullable
-	public InetSocketAddress getLocalAddress() {
+	public @Nullable InetSocketAddress getLocalAddress() {
 		return this.localAddress;
 	}
 
 	@Override
-	@Nullable
-	public InetSocketAddress getRemoteAddress() {
+	public @Nullable InetSocketAddress getRemoteAddress() {
 		return this.remoteAddress;
 	}
 
 	@Override
-	@Nullable
-	protected SslInfo initSslInfo() {
+	protected @Nullable SslInfo initSslInfo() {
 		return this.sslInfo;
 	}
 
@@ -218,7 +193,7 @@ public final class MockServerHttpRequest extends AbstractServerHttpRequest {
 	public static BodyBuilder method(HttpMethod method, URI url) {
 		Assert.notNull(method, "HTTP method is required. " +
 				"For a custom HTTP method, please provide a String HTTP method value.");
-		return new DefaultBodyBuilder(method.name(), url);
+		return new DefaultBodyBuilder(method, url);
 	}
 
 	/**
@@ -235,16 +210,19 @@ public final class MockServerHttpRequest extends AbstractServerHttpRequest {
 	}
 
 	/**
-	 * Create a builder with a raw HTTP method value value that is outside the
+	 * Create a builder with a raw HTTP method value that is outside the
 	 * range of {@link HttpMethod} enum values.
 	 * @param httpMethod the HTTP methodValue value
 	 * @param uri the URI template for target the URL
 	 * @param vars variables to expand into the template
 	 * @return the created builder
 	 * @since 5.2.7
+	 * @deprecated as of Spring Framework 6.0 in favor of {@link #method(HttpMethod, String, Object...)}
 	 */
+	@Deprecated(since = "6.0")
 	public static BodyBuilder method(String httpMethod, String uri, Object... vars) {
-		return new DefaultBodyBuilder(httpMethod, toUri(uri, vars));
+		Assert.hasText(httpMethod, "HTTP method is required.");
+		return new DefaultBodyBuilder(HttpMethod.valueOf(httpMethod), toUri(uri, vars));
 	}
 
 	private static URI toUri(String uri, Object[] vars) {
@@ -254,7 +232,7 @@ public final class MockServerHttpRequest extends AbstractServerHttpRequest {
 
 	/**
 	 * Request builder exposing properties not related to the body.
-	 * @param <B> the builder sub-class
+	 * @param <B> the builder subclass
 	 */
 	public interface BaseBuilder<B extends BaseBuilder<B>> {
 
@@ -320,8 +298,16 @@ public final class MockServerHttpRequest extends AbstractServerHttpRequest {
 		/**
 		 * Add the given header values.
 		 * @param headers the header values
+		 * @deprecated Use {@link #headers(HttpHeaders)}
 		 */
+		@Deprecated
 		B headers(MultiValueMap<String, String> headers);
+
+		/**
+		 * Add the given header values.
+		 * @param headers the header values
+		 */
+		B headers(HttpHeaders headers);
 
 		/**
 		 * Set the list of acceptable {@linkplain MediaType media types}, as
@@ -427,12 +413,11 @@ public final class MockServerHttpRequest extends AbstractServerHttpRequest {
 
 	private static class DefaultBodyBuilder implements BodyBuilder {
 
-		private final String methodValue;
+		private final HttpMethod method;
 
 		private final URI url;
 
-		@Nullable
-		private String contextPath;
+		private @Nullable String contextPath;
 
 		private final UriComponentsBuilder queryParamsBuilder = UriComponentsBuilder.newInstance();
 
@@ -440,17 +425,14 @@ public final class MockServerHttpRequest extends AbstractServerHttpRequest {
 
 		private final MultiValueMap<String, HttpCookie> cookies = new LinkedMultiValueMap<>();
 
-		@Nullable
-		private InetSocketAddress remoteAddress;
+		private @Nullable InetSocketAddress remoteAddress;
 
-		@Nullable
-		private InetSocketAddress localAddress;
+		private @Nullable InetSocketAddress localAddress;
 
-		@Nullable
-		private SslInfo sslInfo;
+		private @Nullable SslInfo sslInfo;
 
-		DefaultBodyBuilder(String method, URI url) {
-			this.methodValue = method;
+		DefaultBodyBuilder(HttpMethod method, URI url) {
+			this.method = method;
 			this.url = url;
 		}
 
@@ -510,7 +492,14 @@ public final class MockServerHttpRequest extends AbstractServerHttpRequest {
 		}
 
 		@Override
+		@Deprecated
 		public BodyBuilder headers(MultiValueMap<String, String> headers) {
+			this.headers.putAll(headers);
+			return this;
+		}
+
+		@Override
+		public BodyBuilder headers(HttpHeaders headers) {
 			this.headers.putAll(headers);
 			return this;
 		}
@@ -589,7 +578,7 @@ public final class MockServerHttpRequest extends AbstractServerHttpRequest {
 		@Override
 		public MockServerHttpRequest body(Publisher<? extends DataBuffer> body) {
 			applyCookiesIfNecessary();
-			return new MockServerHttpRequest(this.methodValue, getUrlToUse(), this.contextPath,
+			return new MockServerHttpRequest(this.method, getUrlToUse(), this.contextPath,
 					this.headers, this.cookies, this.localAddress, this.remoteAddress, this.sslInfo, body);
 		}
 

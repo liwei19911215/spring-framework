@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 
 package org.springframework.web.servlet.theme;
 
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.jspecify.annotations.Nullable;
 
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.ThemeResolver;
@@ -33,13 +33,16 @@ import org.springframework.web.util.WebUtils;
  * This is particularly useful for stateless applications without user sessions.
  *
  * <p>Custom controllers can thus override the user's theme by calling
- * {@code setThemeName}, e.g. responding to a certain theme change request.
+ * {@code setThemeName}, for example, responding to a certain theme change request.
  *
  * @author Jean-Pierre Pawlak
  * @author Juergen Hoeller
  * @since 17.06.2003
  * @see #setThemeName
+ * @deprecated as of 6.0 in favor of using CSS, without direct replacement for removal in 7.1
  */
+@Deprecated(since = "6.0", forRemoval = true)
+@SuppressWarnings("removal")
 public class CookieThemeResolver extends CookieGenerator implements ThemeResolver {
 
 	/**

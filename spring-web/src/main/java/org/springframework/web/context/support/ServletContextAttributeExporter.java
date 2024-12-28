@@ -18,12 +18,11 @@ package org.springframework.web.context.support;
 
 import java.util.Map;
 
-import javax.servlet.ServletContext;
-
+import jakarta.servlet.ServletContext;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 
-import org.springframework.lang.Nullable;
 import org.springframework.web.context.ServletContextAware;
 
 /**
@@ -43,15 +42,14 @@ import org.springframework.web.context.ServletContextAware;
  *
  * @author Juergen Hoeller
  * @since 1.1.4
- * @see javax.servlet.ServletContext#getAttribute
+ * @see jakarta.servlet.ServletContext#getAttribute
  * @see WebApplicationContextUtils#getWebApplicationContext
  */
 public class ServletContextAttributeExporter implements ServletContextAware {
 
 	protected final Log logger = LogFactory.getLog(getClass());
 
-	@Nullable
-	private Map<String, Object> attributes;
+	private @Nullable Map<String, Object> attributes;
 
 
 	/**

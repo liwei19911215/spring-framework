@@ -18,10 +18,9 @@ package org.springframework.web.servlet;
 
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.springframework.lang.Nullable;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.jspecify.annotations.Nullable;
 
 /**
  * MVC View for a web interaction. Implementations are responsible for rendering
@@ -78,8 +77,7 @@ public interface View {
 	 * @return the content type String (optionally including a character set),
 	 * or {@code null} if not predetermined
 	 */
-	@Nullable
-	default String getContentType() {
+	default @Nullable String getContentType() {
 		return null;
 	}
 

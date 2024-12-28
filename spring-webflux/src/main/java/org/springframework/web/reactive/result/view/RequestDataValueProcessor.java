@@ -13,11 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.springframework.web.reactive.result.view;
 
 import java.util.Map;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.web.server.ServerWebExchange;
 
 /**
@@ -62,8 +64,7 @@ public interface RequestDataValueProcessor {
 	 * @param exchange the current exchange
 	 * @return additional hidden form fields to be added, or {@code null}
 	 */
-	@Nullable
-	Map<String, String> getExtraHiddenFields(ServerWebExchange exchange);
+	@Nullable Map<String, String> getExtraHiddenFields(ServerWebExchange exchange);
 
 	/**
 	 * Invoked when a URL is about to be rendered or redirected to.

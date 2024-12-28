@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,15 +21,15 @@ import java.io.UnsupportedEncodingException;
 import java.util.Enumeration;
 import java.util.function.Predicate;
 
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.ServletServerHttpRequest;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.ContentCachingRequestWrapper;
@@ -99,8 +99,7 @@ public abstract class AbstractRequestLoggingFilter extends OncePerRequestFilter 
 
 	private boolean includePayload = false;
 
-	@Nullable
-	private Predicate<String> headerPredicate;
+	private @Nullable Predicate<String> headerPredicate;
 
 	private int maxPayloadLength = DEFAULT_MAX_PAYLOAD_LENGTH;
 
@@ -198,8 +197,7 @@ public abstract class AbstractRequestLoggingFilter extends OncePerRequestFilter 
 	 * The configured {@link #setHeaderPredicate(Predicate) headerPredicate}.
 	 * @since 5.2
 	 */
-	@Nullable
-	protected Predicate<String> getHeaderPredicate() {
+	protected @Nullable Predicate<String> getHeaderPredicate() {
 		return this.headerPredicate;
 	}
 
@@ -209,7 +207,7 @@ public abstract class AbstractRequestLoggingFilter extends OncePerRequestFilter 
 	 * @since 3.0
 	 */
 	public void setMaxPayloadLength(int maxPayloadLength) {
-		Assert.isTrue(maxPayloadLength >= 0, "'maxPayloadLength' should be larger than or equal to 0");
+		Assert.isTrue(maxPayloadLength >= 0, "'maxPayloadLength' must be greater than or equal to 0");
 		this.maxPayloadLength = maxPayloadLength;
 	}
 
@@ -322,7 +320,7 @@ public abstract class AbstractRequestLoggingFilter extends OncePerRequestFilter 
 	protected String createMessage(HttpServletRequest request, String prefix, String suffix) {
 		StringBuilder msg = new StringBuilder();
 		msg.append(prefix);
-		msg.append(request.getMethod()).append(" ");
+		msg.append(request.getMethod()).append(' ');
 		msg.append(request.getRequestURI());
 
 		if (isIncludeQueryString()) {
@@ -378,8 +376,7 @@ public abstract class AbstractRequestLoggingFilter extends OncePerRequestFilter 
 	 * {@link #isIncludePayload()} returns true.
 	 * @since 5.0.3
 	 */
-	@Nullable
-	protected String getMessagePayload(HttpServletRequest request) {
+	protected @Nullable String getMessagePayload(HttpServletRequest request) {
 		ContentCachingRequestWrapper wrapper =
 				WebUtils.getNativeRequest(request, ContentCachingRequestWrapper.class);
 		if (wrapper != null) {

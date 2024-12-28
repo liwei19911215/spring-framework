@@ -16,15 +16,15 @@
 
 package org.springframework.validation.beanvalidation;
 
-import javax.validation.MessageInterpolator;
-import javax.validation.TraversableResolver;
-import javax.validation.Validation;
-import javax.validation.Validator;
-import javax.validation.ValidatorContext;
-import javax.validation.ValidatorFactory;
+import jakarta.validation.MessageInterpolator;
+import jakarta.validation.TraversableResolver;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.ValidatorContext;
+import jakarta.validation.ValidatorFactory;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.lang.Nullable;
 
 /**
  * Configurable bean class that exposes a specific JSR-303 Validator
@@ -36,19 +36,16 @@ import org.springframework.lang.Nullable;
  */
 public class CustomValidatorBean extends SpringValidatorAdapter implements Validator, InitializingBean {
 
-	@Nullable
-	private ValidatorFactory validatorFactory;
+	private @Nullable ValidatorFactory validatorFactory;
 
-	@Nullable
-	private MessageInterpolator messageInterpolator;
+	private @Nullable MessageInterpolator messageInterpolator;
 
-	@Nullable
-	private TraversableResolver traversableResolver;
+	private @Nullable TraversableResolver traversableResolver;
 
 
 	/**
 	 * Set the ValidatorFactory to obtain the target Validator from.
-	 * <p>Default is {@link javax.validation.Validation#buildDefaultValidatorFactory()}.
+	 * <p>Default is {@link jakarta.validation.Validation#buildDefaultValidatorFactory()}.
 	 */
 	public void setValidatorFactory(ValidatorFactory validatorFactory) {
 		this.validatorFactory = validatorFactory;

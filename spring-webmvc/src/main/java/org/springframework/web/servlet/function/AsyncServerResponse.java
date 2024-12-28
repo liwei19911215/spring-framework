@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,286 +16,103 @@
 
 package org.springframework.web.servlet.function;
 
-import java.io.IOException;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
+import java.util.concurrent.ExecutionException;
 
-import javax.servlet.AsyncContext;
-import javax.servlet.AsyncListener;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
-import javax.servlet.http.HttpServletResponse;
-
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 
 import org.springframework.core.ReactiveAdapter;
 import org.springframework.core.ReactiveAdapterRegistry;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.servlet.ModelAndView;
 
 /**
- * Implementation of {@link ServerResponse} based on a {@link CompletableFuture}.
+ * Asynchronous subtype of {@link ServerResponse} that exposes the future
+ * response.
  *
  * @author Arjen Poutsma
- * @since 5.3
+ * @since 5.3.2
  * @see ServerResponse#async(Object)
  */
-final class AsyncServerResponse extends ErrorHandlingServerResponse {
-
-	static final boolean reactiveStreamsPresent = ClassUtils.isPresent(
-			"org.reactivestreams.Publisher", AsyncServerResponse.class.getClassLoader());
-
-
-	private final CompletableFuture<ServerResponse> futureResponse;
-
-
-	private AsyncServerResponse(CompletableFuture<ServerResponse> futureResponse) {
-		this.futureResponse = futureResponse;
-	}
-
-	@Override
-	public HttpStatus statusCode() {
-		return delegate(ServerResponse::statusCode);
-	}
-
-	@Override
-	public int rawStatusCode() {
-		return delegate(ServerResponse::rawStatusCode);
-	}
-
-	@Override
-	public HttpHeaders headers() {
-		return delegate(ServerResponse::headers);
-	}
-
-	@Override
-	public MultiValueMap<String, Cookie> cookies() {
-		return delegate(ServerResponse::cookies);
-	}
-
-	private <R> R delegate(Function<ServerResponse, R> function) {
-		ServerResponse response = this.futureResponse.getNow(null);
-		if (response != null) {
-			return function.apply(response);
-		}
-		else {
-			throw new IllegalStateException("Future ServerResponse has not yet completed");
-		}
-	}
-
-	@Nullable
-	@Override
-	public ModelAndView writeTo(HttpServletRequest request, HttpServletResponse response, Context context) {
-
-		SharedAsyncContextHttpServletRequest sharedRequest = new SharedAsyncContextHttpServletRequest(request);
-		AsyncContext asyncContext = sharedRequest.startAsync(request, response);
-		this.futureResponse.whenComplete((futureResponse, futureThrowable) -> {
-			try {
-				if (futureResponse != null) {
-					ModelAndView mav = futureResponse.writeTo(sharedRequest, response, context);
-					Assert.state(mav == null, "Asynchronous, rendering ServerResponse implementations are not " +
-							"supported in WebMvc.fn. Please use WebFlux.fn instead.");
-				}
-				else if (futureThrowable != null) {
-					handleError(futureThrowable, request, response, context);
-				}
-			}
-			catch (Throwable throwable) {
-				try {
-					handleError(throwable, request, response, context);
-				}
-				catch (ServletException | IOException ex) {
-					logger.warn("Asynchronous execution resulted in exception", ex);
-				}
-			}
-			finally {
-				asyncContext.complete();
-			}
-		});
-		return null;
-	}
-
-
-	@SuppressWarnings({"unchecked"})
-	public static ServerResponse create(Object o) {
-		Assert.notNull(o, "Argument to async must not be null");
-
-		if (o instanceof CompletableFuture) {
-			CompletableFuture<ServerResponse> futureResponse = (CompletableFuture<ServerResponse>) o;
-			return new AsyncServerResponse(futureResponse);
-		}
-		else if (reactiveStreamsPresent) {
-			ReactiveAdapterRegistry registry = ReactiveAdapterRegistry.getSharedInstance();
-			ReactiveAdapter publisherAdapter = registry.getAdapter(o.getClass());
-			if (publisherAdapter != null) {
-				Publisher<ServerResponse> publisher = publisherAdapter.toPublisher(o);
-				ReactiveAdapter futureAdapter = registry.getAdapter(CompletableFuture.class);
-				if (futureAdapter != null) {
-					CompletableFuture<ServerResponse> futureResponse =
-							(CompletableFuture<ServerResponse>) futureAdapter.fromPublisher(publisher);
-					return new AsyncServerResponse(futureResponse);
-				}
-			}
-		}
-		throw new IllegalArgumentException("Asynchronous type not supported: " + o.getClass());
-	}
-
+public interface AsyncServerResponse extends ServerResponse {
 
 	/**
-	 * HttpServletRequestWrapper that shares its AsyncContext between this
-	 * AsyncServerResponse class and other, subsequent ServerResponse
-	 * implementations, keeping track of how many contexts where
-	 * started with startAsync(). This way, we make sure that
-	 * {@link AsyncContext#complete()} only completes for the response that
-	 * finishes last, and is not closed prematurely.
+	 * Blocks indefinitely until the future response is obtained.
 	 */
-	private static final class SharedAsyncContextHttpServletRequest extends HttpServletRequestWrapper {
+	ServerResponse block();
 
-		private final AsyncContext asyncContext;
 
-		private final AtomicInteger startedContexts;
+	// Static creation methods
 
-		public SharedAsyncContextHttpServletRequest(HttpServletRequest request) {
-			super(request);
-			this.asyncContext = request.startAsync();
-			this.startedContexts = new AtomicInteger(0);
-		}
+	/**
+	 * Create a {@code AsyncServerResponse} with the given asynchronous response.
+	 * Parameter {@code asyncResponse} can be a
+	 * {@link CompletableFuture CompletableFuture&lt;ServerResponse&gt;} or
+	 * {@link Publisher Publisher&lt;ServerResponse&gt;} (or any
+	 * asynchronous producer of a single {@code ServerResponse} that can be
+	 * adapted via the {@link ReactiveAdapterRegistry}).
+	 * @param asyncResponse a {@code CompletableFuture<ServerResponse>} or
+	 * {@code Publisher<ServerResponse>}
+	 * @return the asynchronous response
+	 */
+	static AsyncServerResponse create(Object asyncResponse) {
+		return createInternal(asyncResponse, null);
+	}
 
-		private SharedAsyncContextHttpServletRequest(HttpServletRequest request, AsyncContext asyncContext,
-				AtomicInteger startedContexts) {
-			super(request);
-			this.asyncContext = asyncContext;
-			this.startedContexts = startedContexts;
-		}
+	/**
+	 * Create a (built) response with the given asynchronous response.
+	 * Parameter {@code asyncResponse} can be a
+	 * {@link CompletableFuture CompletableFuture&lt;ServerResponse&gt;} or
+	 * {@link Publisher Publisher&lt;ServerResponse&gt;} (or any
+	 * asynchronous producer of a single {@code ServerResponse} that can be
+	 * adapted via the {@link ReactiveAdapterRegistry}).
+	 * @param asyncResponse a {@code CompletableFuture<ServerResponse>} or
+	 * {@code Publisher<ServerResponse>}
+	 * @param timeout maximum time period to wait for before timing out
+	 * @return the asynchronous response
+	 */
+	static AsyncServerResponse create(Object asyncResponse, Duration timeout) {
+		return createInternal(asyncResponse, timeout);
+	}
 
-		@Override
-		public AsyncContext startAsync() throws IllegalStateException {
-			this.startedContexts.incrementAndGet();
-			return new SharedAsyncContext(this.asyncContext, this, this.asyncContext.getResponse(),
-					this.startedContexts);
-		}
+	private static AsyncServerResponse createInternal(Object asyncResponse, @Nullable Duration timeout) {
+		Assert.notNull(asyncResponse, "AsyncResponse must not be null");
 
-		@Override
-		public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse)
-				throws IllegalStateException {
-			this.startedContexts.incrementAndGet();
-			SharedAsyncContextHttpServletRequest sharedRequest;
-			if (servletRequest instanceof SharedAsyncContextHttpServletRequest) {
-				sharedRequest = (SharedAsyncContextHttpServletRequest) servletRequest;
+		CompletableFuture<ServerResponse> futureResponse = toCompletableFuture(asyncResponse);
+		if (futureResponse.isDone() &&
+				!futureResponse.isCancelled() &&
+				!futureResponse.isCompletedExceptionally()) {
+
+			try {
+				ServerResponse completedResponse = futureResponse.get();
+				return new CompletedAsyncServerResponse(completedResponse);
 			}
-			else {
-				sharedRequest = new SharedAsyncContextHttpServletRequest((HttpServletRequest) servletRequest,
-						this.asyncContext, this.startedContexts);
+			catch (InterruptedException | ExecutionException ignored) {
+				// fall through to use DefaultAsyncServerResponse
 			}
-			return new SharedAsyncContext(this.asyncContext, sharedRequest, servletResponse, this.startedContexts);
 		}
+		return new DefaultAsyncServerResponse(futureResponse, timeout);
+	}
 
-		@Override
-		public AsyncContext getAsyncContext() {
-			return new SharedAsyncContext(this.asyncContext, this, this.asyncContext.getResponse(), this.startedContexts);
+	@SuppressWarnings("unchecked")
+	private static CompletableFuture<ServerResponse> toCompletableFuture(Object obj) {
+		if (obj instanceof CompletableFuture<?> futureResponse) {
+			return (CompletableFuture<ServerResponse>) futureResponse;
 		}
-
-
-		private static final class SharedAsyncContext implements AsyncContext {
-
-			private final AsyncContext delegate;
-
-			private final AtomicInteger openContexts;
-
-			private final ServletRequest request;
-
-			private final ServletResponse response;
-
-
-			public SharedAsyncContext(AsyncContext delegate, SharedAsyncContextHttpServletRequest request,
-					ServletResponse response, AtomicInteger usageCount) {
-
-				this.delegate = delegate;
-				this.request = request;
-				this.response = response;
-				this.openContexts = usageCount;
-			}
-
-			@Override
-			public void complete() {
-				if (this.openContexts.decrementAndGet() == 0) {
-					this.delegate.complete();
+		else if (DefaultAsyncServerResponse.reactiveStreamsPresent) {
+			ReactiveAdapterRegistry registry = ReactiveAdapterRegistry.getSharedInstance();
+			ReactiveAdapter publisherAdapter = registry.getAdapter(obj.getClass());
+			if (publisherAdapter != null) {
+				Publisher<ServerResponse> publisher = publisherAdapter.toPublisher(obj);
+				ReactiveAdapter futureAdapter = registry.getAdapter(CompletableFuture.class);
+				if (futureAdapter != null) {
+					return (CompletableFuture<ServerResponse>) futureAdapter.fromPublisher(publisher);
 				}
 			}
-
-			@Override
-			public ServletRequest getRequest() {
-				return this.request;
-			}
-
-			@Override
-			public ServletResponse getResponse() {
-				return this.response;
-			}
-
-			@Override
-			public boolean hasOriginalRequestAndResponse() {
-				return this.delegate.hasOriginalRequestAndResponse();
-			}
-
-			@Override
-			public void dispatch() {
-				this.delegate.dispatch();
-			}
-
-			@Override
-			public void dispatch(String path) {
-				this.delegate.dispatch(path);
-			}
-
-			@Override
-			public void dispatch(ServletContext context, String path) {
-				this.delegate.dispatch(context, path);
-			}
-
-			@Override
-			public void start(Runnable run) {
-				this.delegate.start(run);
-			}
-
-			@Override
-			public void addListener(AsyncListener listener) {
-				this.delegate.addListener(listener);
-			}
-
-			@Override
-			public void addListener(AsyncListener listener,
-					ServletRequest servletRequest,
-					ServletResponse servletResponse) {
-
-				this.delegate.addListener(listener, servletRequest, servletResponse);
-			}
-
-			@Override
-			public <T extends AsyncListener> T createListener(Class<T> clazz) throws ServletException {
-				return this.delegate.createListener(clazz);
-			}
-
-			@Override
-			public void setTimeout(long timeout) {
-				this.delegate.setTimeout(timeout);
-			}
-
-			@Override
-			public long getTimeout() {
-				return this.delegate.getTimeout();
-			}
 		}
+		throw new IllegalArgumentException("Asynchronous type not supported: " + obj.getClass());
 	}
+
 }
+

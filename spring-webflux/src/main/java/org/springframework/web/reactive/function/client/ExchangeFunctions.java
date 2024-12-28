@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.springframework.web.reactive.function.client;
 
 import java.net.URI;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,7 +27,6 @@ import org.springframework.core.log.LogFormatUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpRequest;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.http.client.reactive.ClientHttpResponse;
 import org.springframework.http.codec.LoggingCodecSupport;
@@ -98,14 +98,14 @@ public abstract class ExchangeFunctions {
 			Assert.notNull(clientRequest, "ClientRequest must not be null");
 			HttpMethod httpMethod = clientRequest.method();
 			URI url = clientRequest.url();
-			String logPrefix = clientRequest.logPrefix();
 
 			return this.connector
 					.connect(httpMethod, url, httpRequest -> clientRequest.writeTo(httpRequest, this.strategies))
 					.doOnRequest(n -> logRequest(clientRequest))
-					.doOnCancel(() -> logger.debug(logPrefix + "Cancel signal (to close connection)"))
-					.onErrorResume(WebClientUtils::shouldWrapException, t -> wrapException(t, clientRequest))
+					.doOnCancel(() -> logger.debug(clientRequest.logPrefix() + "Cancel signal (to close connection)"))
+					.onErrorResume(WebClientUtils.WRAP_EXCEPTION_PREDICATE, t -> wrapException(t, clientRequest))
 					.map(httpResponse -> {
+						String logPrefix = getLogPrefix(clientRequest, httpResponse);
 						logResponse(httpResponse, logPrefix);
 						return new DefaultClientResponse(
 								httpResponse, this.strategies, logPrefix, httpMethod.name() + " " + url,
@@ -120,13 +120,13 @@ public abstract class ExchangeFunctions {
 			);
 		}
 
+		private String getLogPrefix(ClientRequest request, ClientHttpResponse response) {
+			return request.logPrefix() + "[" + response.getId() + "] ";
+		}
+
 		private void logResponse(ClientHttpResponse response, String logPrefix) {
-			LogFormatUtils.traceDebug(logger, traceOn -> {
-				int code = response.getRawStatusCode();
-				HttpStatus status = HttpStatus.resolve(code);
-				return logPrefix + "Response " + (status != null ? status : code) +
-						(traceOn ? ", headers=" + formatHeaders(response.getHeaders()) : "");
-			});
+			LogFormatUtils.traceDebug(logger, traceOn -> logPrefix + "Response " + response.getStatusCode() +
+					(traceOn ? ", headers=" + formatHeaders(response.getHeaders()) : ""));
 		}
 
 		private String formatHeaders(HttpHeaders headers) {
@@ -146,13 +146,13 @@ public abstract class ExchangeFunctions {
 				}
 
 				@Override
-				public String getMethodValue() {
-					return request.method().name();
+				public URI getURI() {
+					return request.url();
 				}
 
 				@Override
-				public URI getURI() {
-					return request.url();
+				public Map<String, Object> getAttributes() {
+					return request.attributes();
 				}
 
 				@Override

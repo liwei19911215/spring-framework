@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,20 @@
 
 package org.springframework.http;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.ObjectUtils;
 
 /**
  * Represents an HTTP request or response entity, consisting of headers and body.
  *
- * <p>Typically used in combination with the {@link org.springframework.web.client.RestTemplate},
+ * <p>Often used in combination with the {@link org.springframework.web.client.RestTemplate},
  * like so:
  * <pre class="code">
  * HttpHeaders headers = new HttpHeaders();
  * headers.setContentType(MediaType.TEXT_PLAIN);
- * HttpEntity&lt;String&gt; entity = new HttpEntity&lt;String&gt;(helloWorld, headers);
+ * HttpEntity&lt;String&gt; entity = new HttpEntity&lt;&gt;("Hello World", headers);
  * URI location = template.postForLocation("https://example.com", entity);
  * </pre>
  * or
@@ -39,11 +40,11 @@ import org.springframework.util.ObjectUtils;
  * </pre>
  * Can also be used in Spring MVC, as a return value from a @Controller method:
  * <pre class="code">
- * &#64;RequestMapping("/handle")
+ * &#64;GetMapping("/handle")
  * public HttpEntity&lt;String&gt; handle() {
  *   HttpHeaders responseHeaders = new HttpHeaders();
  *   responseHeaders.set("MyResponseHeader", "MyValue");
- *   return new HttpEntity&lt;String&gt;("Hello World", responseHeaders);
+ *   return new HttpEntity&lt;&gt;("Hello World", responseHeaders);
  * }
  * </pre>
  *
@@ -65,15 +66,14 @@ public class HttpEntity<T> {
 
 	private final HttpHeaders headers;
 
-	@Nullable
-	private final T body;
+	private final @Nullable T body;
 
 
 	/**
 	 * Create a new, empty {@code HttpEntity}.
 	 */
 	protected HttpEntity() {
-		this(null, null);
+		this(null, (HttpHeaders) null);
 	}
 
 	/**
@@ -81,13 +81,35 @@ public class HttpEntity<T> {
 	 * @param body the entity body
 	 */
 	public HttpEntity(T body) {
-		this(body, null);
+		this(body, (HttpHeaders) null);
 	}
 
 	/**
 	 * Create a new {@code HttpEntity} with the given headers and no body.
 	 * @param headers the entity headers
+	 * @since 7.0
 	 */
+	public HttpEntity(HttpHeaders headers) {
+		this(null, headers);
+	}
+
+	/**
+	 * Create a new {@code HttpEntity} with the given body and headers.
+	 * @param body the entity body
+	 * @param headers the entity headers
+	 * @since 7.0
+	 */
+	public HttpEntity(@Nullable T body, @Nullable HttpHeaders headers) {
+		this.body = body;
+		this.headers = HttpHeaders.readOnlyHttpHeaders(headers != null ? headers : new HttpHeaders());
+	}
+
+	/**
+	 * Create a new {@code HttpEntity} with the given headers and no body.
+	 * @param headers the entity headers
+	 * @deprecated Use {@link #HttpEntity(HttpHeaders)}
+	 */
+	@Deprecated
 	public HttpEntity(MultiValueMap<String, String> headers) {
 		this(null, headers);
 	}
@@ -96,10 +118,12 @@ public class HttpEntity<T> {
 	 * Create a new {@code HttpEntity} with the given body and headers.
 	 * @param body the entity body
 	 * @param headers the entity headers
+	 * @deprecated Use {@link #HttpEntity(Object, HttpHeaders)}
 	 */
+	@Deprecated
 	public HttpEntity(@Nullable T body, @Nullable MultiValueMap<String, String> headers) {
 		this.body = body;
-		this.headers = HttpHeaders.readOnlyHttpHeaders(headers != null ? headers : new HttpHeaders());
+		this.headers = HttpHeaders.readOnlyHttpHeaders(headers != null ? new HttpHeaders(headers) : new HttpHeaders());
 	}
 
 
@@ -113,8 +137,7 @@ public class HttpEntity<T> {
 	/**
 	 * Returns the body of this entity.
 	 */
-	@Nullable
-	public T getBody() {
+	public @Nullable T getBody() {
 		return this.body;
 	}
 
@@ -141,7 +164,7 @@ public class HttpEntity<T> {
 
 	@Override
 	public int hashCode() {
-		return (ObjectUtils.nullSafeHashCode(this.headers) * 29 + ObjectUtils.nullSafeHashCode(this.body));
+		return ObjectUtils.nullSafeHash(this.headers, this.body);
 	}
 
 	@Override

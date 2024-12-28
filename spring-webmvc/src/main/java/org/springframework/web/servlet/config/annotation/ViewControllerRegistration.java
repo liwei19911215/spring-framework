@@ -16,9 +16,10 @@
 
 package org.springframework.web.servlet.config.annotation;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.context.ApplicationContext;
-import org.springframework.http.HttpStatus;
-import org.springframework.lang.Nullable;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.util.Assert;
 import org.springframework.web.servlet.RequestToViewNameTranslator;
 import org.springframework.web.servlet.mvc.ParameterizableViewController;
@@ -47,7 +48,7 @@ public class ViewControllerRegistration {
 	 * Set the status code to set on the response. Optional.
 	 * <p>If not set the response status will be 200 (OK).
 	 */
-	public ViewControllerRegistration setStatusCode(HttpStatus statusCode) {
+	public ViewControllerRegistration setStatusCode(HttpStatusCode statusCode) {
 		this.controller.setStatusCode(statusCode);
 		return this;
 	}

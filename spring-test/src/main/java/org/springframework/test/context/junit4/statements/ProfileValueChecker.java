@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,11 @@ package org.springframework.test.context.junit4.statements;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.AssumptionViolatedException;
 import org.junit.runners.model.Statement;
 
 import org.springframework.core.annotation.AnnotatedElementUtils;
-import org.springframework.lang.Nullable;
 import org.springframework.test.annotation.IfProfileValue;
 import org.springframework.test.annotation.ProfileValueUtils;
 import org.springframework.util.Assert;
@@ -46,8 +46,7 @@ public class ProfileValueChecker extends Statement {
 
 	private final Class<?> testClass;
 
-	@Nullable
-	private final Method testMethod;
+	private final @Nullable Method testMethod;
 
 
 	/**
@@ -77,10 +76,10 @@ public class ProfileValueChecker extends Statement {
 	 * <p>If a test is not enabled, this method will abort further evaluation
 	 * of the execution chain with a failed assumption; otherwise, this method
 	 * will simply evaluate the next {@link Statement} in the execution chain.
-	 * @see ProfileValueUtils#isTestEnabledInThisEnvironment(Class)
-	 * @see ProfileValueUtils#isTestEnabledInThisEnvironment(Method, Class)
 	 * @throws AssumptionViolatedException if the test is disabled
 	 * @throws Throwable if evaluation of the next statement fails
+	 * @see ProfileValueUtils#isTestEnabledInThisEnvironment(Class)
+	 * @see ProfileValueUtils#isTestEnabledInThisEnvironment(Method, Class)
 	 */
 	@Override
 	public void evaluate() throws Throwable {

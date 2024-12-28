@@ -16,11 +16,11 @@
 
 package org.springframework.web.context;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletContext;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.lang.Nullable;
 
 /**
  * Interface to be implemented by configurable web application contexts.
@@ -47,7 +47,7 @@ public interface ConfigurableWebApplicationContext extends WebApplicationContext
 
 	/**
 	 * Name of the ServletConfig environment bean in the factory.
-	 * @see javax.servlet.ServletConfig
+	 * @see jakarta.servlet.ServletConfig
 	 */
 	String SERVLET_CONFIG_BEAN_NAME = "servletConfig";
 
@@ -70,8 +70,7 @@ public interface ConfigurableWebApplicationContext extends WebApplicationContext
 	/**
 	 * Return the ServletConfig for this web application context, if any.
 	 */
-	@Nullable
-	ServletConfig getServletConfig();
+	@Nullable ServletConfig getServletConfig();
 
 	/**
 	 * Set the namespace for this web application context,
@@ -83,8 +82,7 @@ public interface ConfigurableWebApplicationContext extends WebApplicationContext
 	/**
 	 * Return the namespace for this web application context, if any.
 	 */
-	@Nullable
-	String getNamespace();
+	@Nullable String getNamespace();
 
 	/**
 	 * Set the config locations for this web application context in init-param style,
@@ -105,7 +103,6 @@ public interface ConfigurableWebApplicationContext extends WebApplicationContext
 	 * Return the config locations for this web application context,
 	 * or {@code null} if none specified.
 	 */
-	@Nullable
-	String[] getConfigLocations();
+	String @Nullable [] getConfigLocations();
 
 }

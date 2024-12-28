@@ -16,11 +16,12 @@
 
 package org.springframework.jms.listener;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.context.SmartLifecycle;
 import org.springframework.jms.support.QosSettings;
 import org.springframework.jms.support.converter.MessageConverter;
 import org.springframework.jms.support.destination.DestinationResolver;
-import org.springframework.lang.Nullable;
 
 /**
  * Internal abstraction used by the framework representing a message
@@ -33,35 +34,33 @@ import org.springframework.lang.Nullable;
 public interface MessageListenerContainer extends SmartLifecycle {
 
 	/**
-	 * Setup the message listener to use. Throws an {@link IllegalArgumentException}
+	 * Set up the message listener to use. Throws an {@link IllegalArgumentException}
 	 * if that message listener type is not supported.
 	 */
 	void setupMessageListener(Object messageListener);
 
 	/**
 	 * Return the {@link MessageConverter} that can be used to
-	 * convert {@link javax.jms.Message}, if any.
+	 * convert {@link jakarta.jms.Message}, if any.
 	 */
-	@Nullable
-	MessageConverter getMessageConverter();
+	@Nullable MessageConverter getMessageConverter();
 
 	/**
 	 * Return the {@link DestinationResolver} to use to resolve
 	 * destinations by names.
 	 */
-	@Nullable
-	DestinationResolver getDestinationResolver();
+	@Nullable DestinationResolver getDestinationResolver();
 
 	/**
-	 * Return whether the Publish/Subscribe domain ({@link javax.jms.Topic Topics}) is used.
-	 * Otherwise, the Point-to-Point domain ({@link javax.jms.Queue Queues}) is used.
+	 * Return whether the Publish/Subscribe domain ({@link jakarta.jms.Topic Topics}) is used.
+	 * Otherwise, the Point-to-Point domain ({@link jakarta.jms.Queue Queues}) is used.
 	 */
 	boolean isPubSubDomain();
 
 	/**
 	 * Return whether the reply destination uses Publish/Subscribe domain
-	 * ({@link javax.jms.Topic Topics}). Otherwise, the Point-to-Point domain
-	 * ({@link javax.jms.Queue Queues}) is used.
+	 * ({@link jakarta.jms.Topic Topics}). Otherwise, the Point-to-Point domain
+	 * ({@link jakarta.jms.Queue Queues}) is used.
 	 * <p>By default, the value is identical to {@link #isPubSubDomain()}.
 	 */
 	boolean isReplyPubSubDomain();
@@ -71,7 +70,6 @@ public interface MessageListenerContainer extends SmartLifecycle {
 	 * or {@code null} if the broker's defaults should be used.
 	 * @since 5.0
 	 */
-	@Nullable
-	QosSettings getReplyQosSettings();
+	@Nullable QosSettings getReplyQosSettings();
 
 }

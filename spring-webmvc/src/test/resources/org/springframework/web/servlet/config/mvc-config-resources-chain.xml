@@ -23,7 +23,7 @@
 
 	<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
 		<property name="properties">
-			<value>location=file:///tmp</value>
+			<value>location=file:///tmp/</value>
 		</property>
 	</bean>
 
@@ -35,9 +35,6 @@
 					<mvc:content-version-strategy patterns="/**"/>
 				</mvc:version-resolver>
 			</mvc:resolvers>
-			<mvc:transformers>
-				<bean class="org.springframework.web.servlet.resource.AppCacheManifestTransformer"/>
-			</mvc:transformers>
 		</mvc:resource-chain>
 	</mvc:resources>
 

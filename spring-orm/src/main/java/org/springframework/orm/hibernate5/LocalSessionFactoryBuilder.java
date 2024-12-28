@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.springframework.orm.hibernate5;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
@@ -28,14 +29,14 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import javax.persistence.AttributeConverter;
-import javax.persistence.Converter;
-import javax.persistence.Embeddable;
-import javax.persistence.Entity;
-import javax.persistence.MappedSuperclass;
 import javax.sql.DataSource;
-import javax.transaction.TransactionManager;
 
+import jakarta.persistence.AttributeConverter;
+import jakarta.persistence.Converter;
+import jakarta.persistence.Embeddable;
+import jakarta.persistence.Entity;
+import jakarta.persistence.MappedSuperclass;
+import jakarta.transaction.TransactionManager;
 import org.hibernate.HibernateException;
 import org.hibernate.MappingException;
 import org.hibernate.SessionFactory;
@@ -48,9 +49,11 @@ import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
 import org.hibernate.engine.jdbc.connections.spi.MultiTenantConnectionProvider;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.resource.jdbc.spi.PhysicalConnectionHandlingMode;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.core.InfrastructureProxy;
+import org.springframework.core.SpringProperties;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
@@ -58,11 +61,11 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternUtils;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
+import org.springframework.core.type.classreading.ClassFormatException;
 import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
-import org.springframework.lang.Nullable;
 import org.springframework.transaction.jta.JtaTransactionManager;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
@@ -72,17 +75,17 @@ import org.springframework.util.ClassUtils;
  * adding {@link SpringSessionContext} as a default and providing convenient ways
  * to specify a JDBC {@link DataSource} and an application class loader.
  *
- * <p>This is designed for programmatic use, e.g. in {@code @Bean} factory methods;
+ * <p>This is designed for programmatic use, for example, in {@code @Bean} factory methods;
  * consider using {@link LocalSessionFactoryBean} for XML bean definition files.
  * Typically combined with {@link HibernateTransactionManager} for declarative
  * transactions against the {@code SessionFactory} and its JDBC {@code DataSource}.
  *
- * <p>Compatible with Hibernate 5.2/5.3/5.4, as of Spring 5.3.
+ * <p>Compatible with Hibernate ORM 5.5/5.6, as of Spring Framework 6.0.
  * This Hibernate-specific factory builder can also be a convenient way to set up
  * a JPA {@code EntityManagerFactory} since the Hibernate {@code SessionFactory}
  * natively exposes the JPA {@code EntityManagerFactory} interface as well now.
  *
- * <p>This builder supports Hibernate 5.3/5.4 {@code BeanContainer} integration,
+ * <p>This builder supports Hibernate {@code BeanContainer} integration,
  * {@link MetadataSources} from custom {@link BootstrapServiceRegistryBuilder}
  * setup, as well as other advanced Hibernate configuration options beyond the
  * standard JPA bootstrap contract.
@@ -109,11 +112,15 @@ public class LocalSessionFactoryBuilder extends Configuration {
 
 	private static final TypeFilter CONVERTER_TYPE_FILTER = new AnnotationTypeFilter(Converter.class, false);
 
+	private static final String IGNORE_CLASSFORMAT_PROPERTY_NAME = "spring.classformat.ignore";
+
+	private static final boolean shouldIgnoreClassFormatException =
+			SpringProperties.getFlag(IGNORE_CLASSFORMAT_PROPERTY_NAME);
+
 
 	private final ResourcePatternResolver resourcePatternResolver;
 
-	@Nullable
-	private TypeFilter[] entityTypeFilters = DEFAULT_ENTITY_TYPE_FILTERS;
+	private @Nullable TypeFilter[] entityTypeFilters = DEFAULT_ENTITY_TYPE_FILTERS;
 
 
 	/**
@@ -151,7 +158,7 @@ public class LocalSessionFactoryBuilder extends Configuration {
 	 * @param dataSource the JDBC DataSource that the resulting Hibernate SessionFactory should be using
 	 * (may be {@code null})
 	 * @param resourceLoader the ResourceLoader to load application classes from
-	 * @param metadataSources the Hibernate MetadataSources service to use (e.g. reusing an existing one)
+	 * @param metadataSources the Hibernate MetadataSources service to use (for example, reusing an existing one)
 	 * @since 4.3
 	 */
 	public LocalSessionFactoryBuilder(
@@ -161,7 +168,7 @@ public class LocalSessionFactoryBuilder extends Configuration {
 
 		getProperties().put(AvailableSettings.CURRENT_SESSION_CONTEXT_CLASS, SpringSessionContext.class.getName());
 		if (dataSource != null) {
-			getProperties().put(AvailableSettings.DATASOURCE, dataSource);
+			getProperties().put(AvailableSettings.JAKARTA_NON_JTA_DATASOURCE, dataSource);
 		}
 		getProperties().put(AvailableSettings.CONNECTION_HANDLING,
 				PhysicalConnectionHandlingMode.DELAYED_ACQUISITION_AND_HOLD);
@@ -185,26 +192,25 @@ public class LocalSessionFactoryBuilder extends Configuration {
 	public LocalSessionFactoryBuilder setJtaTransactionManager(Object jtaTransactionManager) {
 		Assert.notNull(jtaTransactionManager, "Transaction manager reference must not be null");
 
-		if (jtaTransactionManager instanceof JtaTransactionManager) {
+		if (jtaTransactionManager instanceof JtaTransactionManager springJtaTm) {
 			boolean webspherePresent = ClassUtils.isPresent("com.ibm.wsspi.uow.UOWManager", getClass().getClassLoader());
 			if (webspherePresent) {
 				getProperties().put(AvailableSettings.JTA_PLATFORM,
 						"org.hibernate.engine.transaction.jta.platform.internal.WebSphereExtendedJtaPlatform");
 			}
 			else {
-				JtaTransactionManager jtaTm = (JtaTransactionManager) jtaTransactionManager;
-				if (jtaTm.getTransactionManager() == null) {
+				if (springJtaTm.getTransactionManager() == null) {
 					throw new IllegalArgumentException(
 							"Can only apply JtaTransactionManager which has a TransactionManager reference set");
 				}
 				getProperties().put(AvailableSettings.JTA_PLATFORM,
-						new ConfigurableJtaPlatform(jtaTm.getTransactionManager(), jtaTm.getUserTransaction(),
-								jtaTm.getTransactionSynchronizationRegistry()));
+						new ConfigurableJtaPlatform(springJtaTm.getTransactionManager(), springJtaTm.getUserTransaction(),
+								springJtaTm.getTransactionSynchronizationRegistry()));
 			}
 		}
-		else if (jtaTransactionManager instanceof TransactionManager) {
+		else if (jtaTransactionManager instanceof TransactionManager jtaTm) {
 			getProperties().put(AvailableSettings.JTA_PLATFORM,
-					new ConfigurableJtaPlatform((TransactionManager) jtaTransactionManager, null, null));
+					new ConfigurableJtaPlatform(jtaTm, null, null));
 		}
 		else {
 			throw new IllegalArgumentException(
@@ -221,8 +227,7 @@ public class LocalSessionFactoryBuilder extends Configuration {
 	/**
 	 * Set a Hibernate {@link org.hibernate.resource.beans.container.spi.BeanContainer}
 	 * for the given Spring {@link ConfigurableListableBeanFactory}.
-	 * <p>Note: Bean container integration requires Hibernate 5.3 or higher.
-	 * It enables autowiring of Hibernate attribute converters and entity listeners.
+	 * <p>This enables autowiring of Hibernate attribute converters and entity listeners.
 	 * @since 5.1
 	 * @see SpringBeanContainer
 	 * @see AvailableSettings#BEAN_CONTAINER
@@ -250,7 +255,7 @@ public class LocalSessionFactoryBuilder extends Configuration {
 	 * @since 4.3
 	 * @see AvailableSettings#MULTI_TENANT_CONNECTION_PROVIDER
 	 */
-	public LocalSessionFactoryBuilder setMultiTenantConnectionProvider(MultiTenantConnectionProvider multiTenantConnectionProvider) {
+	public LocalSessionFactoryBuilder setMultiTenantConnectionProvider(MultiTenantConnectionProvider<?> multiTenantConnectionProvider) {
 		getProperties().put(AvailableSettings.MULTI_TENANT_CONNECTION_PROVIDER, multiTenantConnectionProvider);
 		return this;
 	}
@@ -261,32 +266,21 @@ public class LocalSessionFactoryBuilder extends Configuration {
 	 * @see AvailableSettings#MULTI_TENANT_IDENTIFIER_RESOLVER
 	 */
 	@Override
-	public void setCurrentTenantIdentifierResolver(CurrentTenantIdentifierResolver currentTenantIdentifierResolver) {
+	public LocalSessionFactoryBuilder setCurrentTenantIdentifierResolver(CurrentTenantIdentifierResolver<Object> currentTenantIdentifierResolver) {
 		getProperties().put(AvailableSettings.MULTI_TENANT_IDENTIFIER_RESOLVER, currentTenantIdentifierResolver);
 		super.setCurrentTenantIdentifierResolver(currentTenantIdentifierResolver);
+		return this;
 	}
 
 	/**
 	 * Specify custom type filters for Spring-based scanning for entity classes.
 	 * <p>Default is to search all specified packages for classes annotated with
-	 * {@code @javax.persistence.Entity}, {@code @javax.persistence.Embeddable}
-	 * or {@code @javax.persistence.MappedSuperclass}.
+	 * {@code @jakarta.persistence.Entity}, {@code @jakarta.persistence.Embeddable}
+	 * or {@code @jakarta.persistence.MappedSuperclass}.
 	 * @see #scanPackages
 	 */
 	public LocalSessionFactoryBuilder setEntityTypeFilters(TypeFilter... entityTypeFilters) {
 		this.entityTypeFilters = entityTypeFilters;
-		return this;
-	}
-
-	/**
-	 * Add the given annotated classes in a batch.
-	 * @see #addAnnotatedClass
-	 * @see #scanPackages
-	 */
-	public LocalSessionFactoryBuilder addAnnotatedClasses(Class<?>... annotatedClasses) {
-		for (Class<?> annotatedClass : annotatedClasses) {
-			addAnnotatedClass(annotatedClass);
-		}
 		return this;
 	}
 
@@ -320,7 +314,7 @@ public class LocalSessionFactoryBuilder extends Configuration {
 				Resource[] resources = this.resourcePatternResolver.getResources(pattern);
 				MetadataReaderFactory readerFactory = new CachingMetadataReaderFactory(this.resourcePatternResolver);
 				for (Resource resource : resources) {
-					if (resource.isReadable()) {
+					try {
 						MetadataReader reader = readerFactory.getMetadataReader(resource);
 						String className = reader.getClassMetadata().getClassName();
 						if (matchesEntityTypeFilter(reader, readerFactory)) {
@@ -332,6 +326,17 @@ public class LocalSessionFactoryBuilder extends Configuration {
 						else if (className.endsWith(PACKAGE_INFO_SUFFIX)) {
 							packageNames.add(className.substring(0, className.length() - PACKAGE_INFO_SUFFIX.length()));
 						}
+					}
+					catch (FileNotFoundException ex) {
+						// Ignore non-readable resource
+					}
+					catch (ClassFormatException ex) {
+						if (!shouldIgnoreClassFormatException) {
+							throw new MappingException("Incompatible class format in " + resource, ex);
+						}
+					}
+					catch (Throwable ex) {
+						throw new MappingException("Failed to read candidate component class: " + resource, ex);
 					}
 				}
 			}
@@ -375,7 +380,7 @@ public class LocalSessionFactoryBuilder extends Configuration {
 	/**
 	 * Build the Hibernate {@code SessionFactory} through background bootstrapping,
 	 * using the given executor for a parallel initialization phase
-	 * (e.g. a {@link org.springframework.core.task.SimpleAsyncTaskExecutor}).
+	 * (for example, a {@link org.springframework.core.task.SimpleAsyncTaskExecutor}).
 	 * <p>{@code SessionFactory} initialization will then switch into background
 	 * bootstrap mode, with a {@code SessionFactory} proxy immediately returned for
 	 * injection purposes instead of waiting for Hibernate's bootstrapping to complete.
@@ -410,28 +415,25 @@ public class LocalSessionFactoryBuilder extends Configuration {
 
 		@Override
 		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-			switch (method.getName()) {
-				case "equals":
-					// Only consider equal when proxies are identical.
-					return (proxy == args[0]);
-				case "hashCode":
-					// Use hashCode of EntityManagerFactory proxy.
-					return System.identityHashCode(proxy);
-				case "getProperties":
-					return getProperties();
-				case "getWrappedObject":
-					// Call coming in through InfrastructureProxy interface...
-					return getSessionFactory();
-			}
-
-			// Regular delegation to the target SessionFactory,
-			// enforcing its full initialization...
-			try {
-				return method.invoke(getSessionFactory(), args);
-			}
-			catch (InvocationTargetException ex) {
-				throw ex.getTargetException();
-			}
+			return switch (method.getName()) {
+				// Only consider equal when proxies are identical.
+				case "equals" -> (proxy == args[0]);
+				// Use hashCode of EntityManagerFactory proxy.
+				case "hashCode" -> System.identityHashCode(proxy);
+				case "getProperties" -> getProperties();
+				// Call coming in through InfrastructureProxy interface...
+				case "getWrappedObject" -> getSessionFactory();
+				default -> {
+					try {
+						// Regular delegation to the target SessionFactory,
+						// enforcing its full initialization...
+						yield method.invoke(getSessionFactory(), args);
+					}
+					catch (InvocationTargetException ex) {
+						throw ex.getTargetException();
+					}
+				}
+			};
 		}
 
 		private SessionFactory getSessionFactory() {
@@ -444,9 +446,9 @@ public class LocalSessionFactoryBuilder extends Configuration {
 			}
 			catch (ExecutionException ex) {
 				Throwable cause = ex.getCause();
-				if (cause instanceof HibernateException) {
+				if (cause instanceof HibernateException hibernateException) {
 					// Rethrow a provider configuration exception (possibly with a nested cause) directly
-					throw (HibernateException) cause;
+					throw hibernateException;
 				}
 				throw new IllegalStateException("Failed to asynchronously initialize Hibernate SessionFactory: " +
 						ex.getMessage(), cause);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.core.JsonEncoding;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -31,17 +28,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.ser.FilterProvider;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.http.converter.json.MappingJacksonValue;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.web.servlet.view.AbstractView;
 
 /**
  * Abstract base class for Jackson based and content type independent
  * {@link AbstractView} implementations.
- *
- * <p>Compatible with Jackson 2.9 to 2.12, as of Spring 5.3.
  *
  * @author Jeremy Grelle
  * @author Arjen Poutsma
@@ -56,8 +53,7 @@ public abstract class AbstractJackson2View extends AbstractView {
 
 	private JsonEncoding encoding = JsonEncoding.UTF8;
 
-	@Nullable
-	private Boolean prettyPrint;
+	private @Nullable Boolean prettyPrint;
 
 	private boolean disableCaching = true;
 
@@ -213,8 +209,7 @@ public abstract class AbstractJackson2View extends AbstractView {
 			Class<?> serializationView = null;
 			FilterProvider filters = null;
 
-			if (value instanceof MappingJacksonValue) {
-				MappingJacksonValue container = (MappingJacksonValue) value;
+			if (value instanceof MappingJacksonValue container) {
 				value = container.getValue();
 				serializationView = container.getSerializationView();
 				filters = container.getFilters();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,29 +20,28 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.http.HttpHeaders;
-import org.springframework.lang.Nullable;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
 
 /**
  * {@link ClientHttpResponse} implementation that uses standard JDK facilities.
- * Obtained via {@link SimpleBufferingClientHttpRequest#execute()} and
- * {@link SimpleStreamingClientHttpRequest#execute()}.
+ * Obtained via {@link SimpleClientHttpRequest#execute()}.
  *
  * @author Arjen Poutsma
  * @author Brian Clozel
  * @since 3.0
  */
-final class SimpleClientHttpResponse extends AbstractClientHttpResponse {
+final class SimpleClientHttpResponse implements ClientHttpResponse {
 
 	private final HttpURLConnection connection;
 
-	@Nullable
-	private HttpHeaders headers;
+	private @Nullable HttpHeaders headers;
 
-	@Nullable
-	private InputStream responseStream;
+	private @Nullable InputStream responseStream;
 
 
 	SimpleClientHttpResponse(HttpURLConnection connection) {
@@ -51,8 +50,8 @@ final class SimpleClientHttpResponse extends AbstractClientHttpResponse {
 
 
 	@Override
-	public int getRawStatusCode() throws IOException {
-		return this.connection.getResponseCode();
+	public HttpStatusCode getStatusCode() throws IOException {
+		return HttpStatusCode.valueOf(this.connection.getResponseCode());
 	}
 
 	@Override
@@ -85,8 +84,15 @@ final class SimpleClientHttpResponse extends AbstractClientHttpResponse {
 
 	@Override
 	public InputStream getBody() throws IOException {
-		InputStream errorStream = this.connection.getErrorStream();
-		this.responseStream = (errorStream != null ? errorStream : this.connection.getInputStream());
+		if (this.responseStream == null) {
+			if (this.connection.getResponseCode() >= 400) {
+				InputStream errorStream = this.connection.getErrorStream();
+				this.responseStream = (errorStream != null) ? errorStream : InputStream.nullInputStream();
+			}
+			else {
+				this.responseStream = this.connection.getInputStream();
+			}
+		}
 		return this.responseStream;
 	}
 

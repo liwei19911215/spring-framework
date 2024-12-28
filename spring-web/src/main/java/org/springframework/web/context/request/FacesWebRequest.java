@@ -21,14 +21,14 @@ import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
 
-import javax.faces.context.ExternalContext;
-import javax.faces.context.FacesContext;
+import jakarta.faces.context.ExternalContext;
+import jakarta.faces.context.FacesContext;
+import org.jspecify.annotations.Nullable;
 
-import org.springframework.lang.Nullable;
 import org.springframework.util.StringUtils;
 
 /**
- * {@link WebRequest} adapter for a JSF {@link javax.faces.context.FacesContext}.
+ * {@link WebRequest} adapter for a JSF {@link jakarta.faces.context.FacesContext}.
  *
  * <p>Requires JSF 2.0 or higher, as of Spring 4.0.
  *
@@ -40,7 +40,7 @@ public class FacesWebRequest extends FacesRequestAttributes implements NativeWeb
 	/**
 	 * Create a new FacesWebRequest adapter for the given FacesContext.
 	 * @param facesContext the current FacesContext
-	 * @see javax.faces.context.FacesContext#getCurrentInstance()
+	 * @see jakarta.faces.context.FacesContext#getCurrentInstance()
 	 */
 	public FacesWebRequest(FacesContext facesContext) {
 		super(facesContext);
@@ -59,7 +59,7 @@ public class FacesWebRequest extends FacesRequestAttributes implements NativeWeb
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public <T> T getNativeRequest(@Nullable Class<T> requiredType) {
+	public <T> @Nullable T getNativeRequest(@Nullable Class<T> requiredType) {
 		if (requiredType != null) {
 			Object request = getExternalContext().getRequest();
 			if (requiredType.isInstance(request)) {
@@ -71,7 +71,7 @@ public class FacesWebRequest extends FacesRequestAttributes implements NativeWeb
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public <T> T getNativeResponse(@Nullable Class<T> requiredType) {
+	public <T> @Nullable T getNativeResponse(@Nullable Class<T> requiredType) {
 		if (requiredType != null) {
 			Object response = getExternalContext().getResponse();
 			if (requiredType.isInstance(response)) {
@@ -83,14 +83,12 @@ public class FacesWebRequest extends FacesRequestAttributes implements NativeWeb
 
 
 	@Override
-	@Nullable
-	public String getHeader(String headerName) {
+	public @Nullable String getHeader(String headerName) {
 		return getExternalContext().getRequestHeaderMap().get(headerName);
 	}
 
 	@Override
-	@Nullable
-	public String[] getHeaderValues(String headerName) {
+	public String @Nullable [] getHeaderValues(String headerName) {
 		return getExternalContext().getRequestHeaderValuesMap().get(headerName);
 	}
 
@@ -100,8 +98,7 @@ public class FacesWebRequest extends FacesRequestAttributes implements NativeWeb
 	}
 
 	@Override
-	@Nullable
-	public String getParameter(String paramName) {
+	public @Nullable String getParameter(String paramName) {
 		return getExternalContext().getRequestParameterMap().get(paramName);
 	}
 
@@ -111,8 +108,7 @@ public class FacesWebRequest extends FacesRequestAttributes implements NativeWeb
 	}
 
 	@Override
-	@Nullable
-	public String[] getParameterValues(String paramName) {
+	public String @Nullable [] getParameterValues(String paramName) {
 		return getExternalContext().getRequestParameterValuesMap().get(paramName);
 	}
 
@@ -132,14 +128,12 @@ public class FacesWebRequest extends FacesRequestAttributes implements NativeWeb
 	}
 
 	@Override
-	@Nullable
-	public String getRemoteUser() {
+	public @Nullable String getRemoteUser() {
 		return getFacesContext().getExternalContext().getRemoteUser();
 	}
 
 	@Override
-	@Nullable
-	public Principal getUserPrincipal() {
+	public @Nullable Principal getUserPrincipal() {
 		return getFacesContext().getExternalContext().getUserPrincipal();
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,9 @@ package org.springframework.http.client.reactive;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
-import java.util.Collection;
+import java.util.List;
 import java.util.function.Function;
 
-import org.apache.hc.client5.http.cookie.CookieStore;
-import org.apache.hc.client5.http.impl.cookie.BasicClientCookie;
 import org.apache.hc.client5.http.protocol.HttpClientContext;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.HttpRequest;
@@ -31,21 +29,23 @@ import org.apache.hc.core5.http.message.BasicHttpRequest;
 import org.apache.hc.core5.http.nio.AsyncRequestProducer;
 import org.apache.hc.core5.http.nio.support.BasicRequestProducer;
 import org.apache.hc.core5.reactive.ReactiveEntityProducer;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
+import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-
-import static org.springframework.http.MediaType.ALL_VALUE;
+import org.springframework.http.MediaType;
+import org.springframework.http.support.HttpComponentsHeadersAdapter;
+import org.springframework.util.CollectionUtils;
 
 /**
  * {@link ClientHttpRequest} implementation for the Apache HttpComponents HttpClient 5.x.
+ *
  * @author Martin Tarjányi
  * @author Arjen Poutsma
  * @since 5.3
@@ -59,8 +59,9 @@ class HttpComponentsClientHttpRequest extends AbstractClientHttpRequest {
 
 	private final HttpClientContext context;
 
-	@Nullable
-	private Flux<ByteBuffer> byteBufferFlux;
+	private @Nullable Flux<ByteBuffer> byteBufferFlux;
+
+	private transient long contentLength = -1;
 
 
 	public HttpComponentsClientHttpRequest(HttpMethod method, URI uri, HttpClientContext context,
@@ -74,9 +75,7 @@ class HttpComponentsClientHttpRequest extends AbstractClientHttpRequest {
 
 	@Override
 	public HttpMethod getMethod() {
-		HttpMethod method = HttpMethod.resolve(this.httpRequest.getMethod());
-		Assert.state(method != null, "Method must not be null");
-		return method;
+		return HttpMethod.valueOf(this.httpRequest.getMethod());
 	}
 
 	@Override
@@ -103,7 +102,11 @@ class HttpComponentsClientHttpRequest extends AbstractClientHttpRequest {
 	@Override
 	public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
 		return doCommit(() -> {
-			this.byteBufferFlux = Flux.from(body).map(DataBuffer::asByteBuffer);
+			this.byteBufferFlux = Flux.from(body).map(dataBuffer -> {
+				ByteBuffer byteBuffer = ByteBuffer.allocate(dataBuffer.readableByteCount());
+				dataBuffer.toByteBuffer(byteBuffer);
+				return byteBuffer;
+			});
 			return Mono.empty();
 		});
 	}
@@ -122,14 +125,16 @@ class HttpComponentsClientHttpRequest extends AbstractClientHttpRequest {
 	protected void applyHeaders() {
 		HttpHeaders headers = getHeaders();
 
-		headers.entrySet()
+		headers.headerSet()
 				.stream()
 				.filter(entry -> !HttpHeaders.CONTENT_LENGTH.equals(entry.getKey()))
 				.forEach(entry -> entry.getValue().forEach(v -> this.httpRequest.addHeader(entry.getKey(), v)));
 
 		if (!this.httpRequest.containsHeader(HttpHeaders.ACCEPT)) {
-			this.httpRequest.addHeader(HttpHeaders.ACCEPT, ALL_VALUE);
+			this.httpRequest.addHeader(HttpHeaders.ACCEPT, MediaType.ALL_VALUE);
 		}
+
+		this.contentLength = headers.getContentLength();
 	}
 
 	@Override
@@ -137,18 +142,43 @@ class HttpComponentsClientHttpRequest extends AbstractClientHttpRequest {
 		if (getCookies().isEmpty()) {
 			return;
 		}
+		if (!CollectionUtils.isEmpty(getCookies())) {
+			this.httpRequest.setHeader(HttpHeaders.COOKIE, serializeCookies());
+		}
+	}
 
-		CookieStore cookieStore = this.context.getCookieStore();
+	private String serializeCookies() {
+		boolean first = true;
+		StringBuilder sb = new StringBuilder();
+		for (List<HttpCookie> cookies : getCookies().values()) {
+			for (HttpCookie cookie : cookies) {
+				if (!first) {
+					sb.append("; ");
+				}
+				else {
+					first = false;
+				}
+				sb.append(cookie.getName()).append("=").append(cookie.getValue());
+			}
+		}
+		return sb.toString();
+	}
 
-		getCookies().values()
-				.stream()
-				.flatMap(Collection::stream)
-				.forEach(cookie -> {
-					BasicClientCookie clientCookie = new BasicClientCookie(cookie.getName(), cookie.getValue());
-					clientCookie.setDomain(getURI().getHost());
-					clientCookie.setPath(getURI().getPath());
-					cookieStore.addCookie(clientCookie);
-				});
+	/**
+	 * Applies the attributes to the {@link HttpClientContext}.
+	 */
+	@Override
+	protected void applyAttributes() {
+		getAttributes().forEach((key, value) -> {
+			if (this.context.getAttribute(key) == null) {
+				this.context.setAttribute(key, value);
+			}
+		});
+	}
+
+	@Override
+	protected HttpHeaders initReadOnlyHeaders() {
+		return HttpHeaders.readOnlyHttpHeaders(new HttpComponentsHeadersAdapter(this.httpRequest));
 	}
 
 	public AsyncRequestProducer toRequestProducer() {
@@ -160,8 +190,8 @@ class HttpComponentsClientHttpRequest extends AbstractClientHttpRequest {
 			if (getHeaders().getContentType() != null) {
 				contentType = ContentType.parse(getHeaders().getContentType().toString());
 			}
-			reactiveEntityProducer = new ReactiveEntityProducer(this.byteBufferFlux, getHeaders().getContentLength(),
-					contentType, contentEncoding);
+			reactiveEntityProducer = new ReactiveEntityProducer(
+					this.byteBufferFlux, this.contentLength, contentType, contentEncoding);
 		}
 
 		return new BasicRequestProducer(this.httpRequest, reactiveEntityProducer);

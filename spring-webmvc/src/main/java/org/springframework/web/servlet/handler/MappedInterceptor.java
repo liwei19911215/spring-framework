@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,11 @@ package org.springframework.web.servlet.handler;
 
 import java.util.Arrays;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.http.server.PathContainer;
-import org.springframework.lang.Nullable;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.PathMatcher;
@@ -34,24 +34,24 @@ import org.springframework.web.util.ServletRequestPathUtils;
 import org.springframework.web.util.UrlPathHelper;
 import org.springframework.web.util.pattern.PathPattern;
 import org.springframework.web.util.pattern.PathPatternParser;
+import org.springframework.web.util.pattern.PatternParseException;
 
 /**
  * Wraps a {@link HandlerInterceptor} and uses URL patterns to determine whether
  * it applies to a given request.
  *
- * <p>Pattern matching can be done with {@link PathMatcher} or with parsed
+ * <p>Pattern matching can be done with a {@link PathMatcher} or with a parsed
  * {@link PathPattern}. The syntax is largely the same with the latter being more
  * tailored for web usage and more efficient. The choice is driven by the
- * presence of a {@link UrlPathHelper#resolveAndCacheLookupPath resolved}
- * {@code String} lookupPath or a {@link ServletRequestPathUtils#parseAndCache
- * parsed} {@code RequestPath} which in turn depends on the
- * {@link HandlerMapping} that matched the current request.
+ * presence of a {@linkplain UrlPathHelper#resolveAndCacheLookupPath resolved}
+ * {@code String} lookupPath or a {@linkplain ServletRequestPathUtils#parseAndCache
+ * parsed} {@code RequestPath} which in turn depends on the {@link HandlerMapping}
+ * that matched the current request.
  *
- * <p>{@code MappedInterceptor} is supported by sub-classes of
+ * <p>{@code MappedInterceptor} is supported by subclasses of
  * {@link org.springframework.web.servlet.handler.AbstractHandlerMethodMapping
- * AbstractHandlerMethodMapping} which detect beans of type
- * {@code MappedInterceptor} and also check if interceptors directly registered
- * with it are of this type.
+ * AbstractHandlerMethodMapping} which detect beans of type {@code MappedInterceptor}
+ * and also check if interceptors directly registered with it are of this type.
  *
  * @author Keith Donald
  * @author Rossen Stoyanchev
@@ -60,14 +60,12 @@ import org.springframework.web.util.pattern.PathPatternParser;
  */
 public final class MappedInterceptor implements HandlerInterceptor {
 
-	private static PathMatcher defaultPathMatcher = new AntPathMatcher();
+	private static final PathMatcher defaultPathMatcher = new AntPathMatcher();
 
 
-	@Nullable
-	private final PathPattern[] includePatterns;
+	private final PatternAdapter @Nullable [] includePatterns;
 
-	@Nullable
-	private final PathPattern[] excludePatterns;
+	private final PatternAdapter @Nullable [] excludePatterns;
 
 	private PathMatcher pathMatcher = defaultPathMatcher;
 
@@ -85,31 +83,21 @@ public final class MappedInterceptor implements HandlerInterceptor {
 	 * when not provided, {@link PathPatternParser#defaultInstance} is used.
 	 * @since 5.3
 	 */
-	public MappedInterceptor(@Nullable String[] includePatterns, @Nullable String[] excludePatterns,
+	public MappedInterceptor(String @Nullable [] includePatterns, String @Nullable [] excludePatterns,
 			HandlerInterceptor interceptor, @Nullable PathPatternParser parser) {
 
-		this.includePatterns = initPatterns(includePatterns, parser);
-		this.excludePatterns = initPatterns(excludePatterns, parser);
+		this.includePatterns = PatternAdapter.initPatterns(includePatterns, parser);
+		this.excludePatterns = PatternAdapter.initPatterns(excludePatterns, parser);
 		this.interceptor = interceptor;
 	}
 
-	@Nullable
-	private static PathPattern[] initPatterns(
-			@Nullable String[] patterns, @Nullable PathPatternParser parser) {
-
-		if (ObjectUtils.isEmpty(patterns)) {
-			return null;
-		}
-		parser = (parser != null ? parser : PathPatternParser.defaultInstance);
-		return Arrays.stream(patterns).map(parser::parse).toArray(PathPattern[]::new);
-	}
 
 	/**
 	 * Variant of
 	 * {@link #MappedInterceptor(String[], String[], HandlerInterceptor, PathPatternParser)}
 	 * with include patterns only.
 	 */
-	public MappedInterceptor(@Nullable String[] includePatterns, HandlerInterceptor interceptor) {
+	public MappedInterceptor(String @Nullable [] includePatterns, HandlerInterceptor interceptor) {
 		this(includePatterns, null, interceptor);
 	}
 
@@ -118,7 +106,7 @@ public final class MappedInterceptor implements HandlerInterceptor {
 	 * {@link #MappedInterceptor(String[], String[], HandlerInterceptor, PathPatternParser)}
 	 * without a provided parser.
 	 */
-	public MappedInterceptor(@Nullable String[] includePatterns, @Nullable String[] excludePatterns,
+	public MappedInterceptor(String @Nullable [] includePatterns, String @Nullable [] excludePatterns,
 			HandlerInterceptor interceptor) {
 
 		this(includePatterns, excludePatterns, interceptor, null);
@@ -129,7 +117,7 @@ public final class MappedInterceptor implements HandlerInterceptor {
 	 * {@link #MappedInterceptor(String[], String[], HandlerInterceptor, PathPatternParser)}
 	 * with a {@link WebRequestInterceptor} as the target.
 	 */
-	public MappedInterceptor(@Nullable String[] includePatterns, WebRequestInterceptor interceptor) {
+	public MappedInterceptor(String @Nullable [] includePatterns, WebRequestInterceptor interceptor) {
 		this(includePatterns, null, interceptor);
 	}
 
@@ -138,7 +126,7 @@ public final class MappedInterceptor implements HandlerInterceptor {
 	 * {@link #MappedInterceptor(String[], String[], HandlerInterceptor, PathPatternParser)}
 	 * with a {@link WebRequestInterceptor} as the target.
 	 */
-	public MappedInterceptor(@Nullable String[] includePatterns, @Nullable String[] excludePatterns,
+	public MappedInterceptor(String @Nullable [] includePatterns, String @Nullable [] excludePatterns,
 			WebRequestInterceptor interceptor) {
 
 		this(includePatterns, excludePatterns, new WebRequestHandlerInterceptorAdapter(interceptor));
@@ -146,12 +134,24 @@ public final class MappedInterceptor implements HandlerInterceptor {
 
 
 	/**
-	 * Return the patterns this interceptor is mapped to.
+	 * Get the include path patterns this interceptor is mapped to.
+	 * @since 6.1
+	 * @see #getExcludePathPatterns()
 	 */
-	@Nullable
-	public String[] getPathPatterns() {
+	public String @Nullable [] getIncludePathPatterns() {
 		return (!ObjectUtils.isEmpty(this.includePatterns) ?
-				Arrays.stream(this.includePatterns).map(PathPattern::getPatternString).toArray(String[]::new) :
+				Arrays.stream(this.includePatterns).map(PatternAdapter::getPatternString).toArray(String[]::new) :
+				null);
+	}
+
+	/**
+	 * Get the exclude path patterns this interceptor is mapped to.
+	 * @since 6.1
+	 * @see #getIncludePathPatterns()
+	 */
+	public String @Nullable [] getExcludePathPatterns() {
+		return (!ObjectUtils.isEmpty(this.excludePatterns) ?
+				Arrays.stream(this.excludePatterns).map(PatternAdapter::getPatternString).toArray(String[]::new) :
 				null);
 	}
 
@@ -170,16 +170,24 @@ public final class MappedInterceptor implements HandlerInterceptor {
 	 * <p>By default this is {@link AntPathMatcher}.
 	 * <p><strong>Note:</strong> Setting {@code PathMatcher} enforces use of
 	 * String pattern matching even when a
-	 * {@link ServletRequestPathUtils#parseAndCache parsed} {@code RequestPath}
+	 * {@linkplain ServletRequestPathUtils#parseAndCache parsed} {@code RequestPath}
 	 * is available.
+	 * @deprecated use of {@link PathMatcher} and {@link UrlPathHelper} is deprecated
+	 * for use at runtime in web modules in favor of parsed patterns with
+	 * {@link PathPatternParser}.
 	 */
+	@Deprecated(since = "7.0", forRemoval = true)
 	public void setPathMatcher(PathMatcher pathMatcher) {
 		this.pathMatcher = pathMatcher;
 	}
 
 	/**
-	 * The {@link #setPathMatcher(PathMatcher) configured} PathMatcher.
+	 * Get the {@linkplain #setPathMatcher(PathMatcher) configured} PathMatcher.
+	 * @deprecated use of {@link PathMatcher} and {@link UrlPathHelper} is deprecated
+	 * for use at runtime in web modules in favor of parsed patterns with
+	 * {@link PathPatternParser}.
 	 */
+	@Deprecated(since = "7.0", forRemoval = true)
 	public PathMatcher getPathMatcher() {
 		return this.pathMatcher;
 	}
@@ -199,8 +207,8 @@ public final class MappedInterceptor implements HandlerInterceptor {
 		}
 		boolean isPathContainer = (path instanceof PathContainer);
 		if (!ObjectUtils.isEmpty(this.excludePatterns)) {
-			for (PathPattern pattern : this.excludePatterns) {
-				if (matchPattern(path, isPathContainer, pattern)) {
+			for (PatternAdapter adapter : this.excludePatterns) {
+				if (adapter.match(path, isPathContainer, this.pathMatcher)) {
 					return false;
 				}
 			}
@@ -208,33 +216,27 @@ public final class MappedInterceptor implements HandlerInterceptor {
 		if (ObjectUtils.isEmpty(this.includePatterns)) {
 			return true;
 		}
-		for (PathPattern pattern : this.includePatterns) {
-			if (matchPattern(path, isPathContainer, pattern)) {
+		for (PatternAdapter adapter : this.includePatterns) {
+			if (adapter.match(path, isPathContainer, this.pathMatcher)) {
 				return true;
 			}
 		}
 		return false;
 	}
 
-	private boolean matchPattern(Object path, boolean isPathContainer, PathPattern pattern) {
-		return (isPathContainer ?
-				pattern.matches((PathContainer) path) :
-				this.pathMatcher.match(pattern.getPatternString(), (String) path));
-	}
-
 	/**
-	 * Determine a match for the given lookup path.
+	 * Determine if there is a match for the given lookup path.
 	 * @param lookupPath the current request path
 	 * @param pathMatcher a path matcher for path pattern matching
 	 * @return {@code true} if the interceptor applies to the given request path
 	 * @deprecated as of 5.3 in favor of {@link #matches(HttpServletRequest)}
 	 */
-	@Deprecated
+	@Deprecated(since = "5.3")
 	public boolean matches(String lookupPath, PathMatcher pathMatcher) {
 		pathMatcher = (this.pathMatcher != defaultPathMatcher ? this.pathMatcher : pathMatcher);
 		if (!ObjectUtils.isEmpty(this.excludePatterns)) {
-			for (PathPattern pattern : this.excludePatterns) {
-				if (pathMatcher.match(pattern.getPatternString(), lookupPath)) {
+			for (PatternAdapter adapter : this.excludePatterns) {
+				if (pathMatcher.match(adapter.getPatternString(), lookupPath)) {
 					return false;
 				}
 			}
@@ -242,8 +244,8 @@ public final class MappedInterceptor implements HandlerInterceptor {
 		if (ObjectUtils.isEmpty(this.includePatterns)) {
 			return true;
 		}
-		for (PathPattern pattern : this.includePatterns) {
-			if (pathMatcher.match(pattern.getPatternString(), lookupPath)) {
+		for (PatternAdapter adapter : this.includePatterns) {
+			if (pathMatcher.match(adapter.getPatternString(), lookupPath)) {
 				return true;
 			}
 		}
@@ -272,6 +274,63 @@ public final class MappedInterceptor implements HandlerInterceptor {
 			@Nullable Exception ex) throws Exception {
 
 		this.interceptor.afterCompletion(request, response, handler, ex);
+	}
+
+
+	/**
+	 * Contains both the parsed {@link PathPattern} and the raw String pattern,
+	 * and uses the former when the cached path is {@link PathContainer} or the
+	 * latter otherwise. If the pattern cannot be parsed due to unsupported
+	 * syntax, then {@link PathMatcher} is used for all requests.
+	 * @since 5.3.6
+	 */
+	private static class PatternAdapter {
+
+		private final String patternString;
+
+		private final @Nullable PathPattern pathPattern;
+
+
+		public PatternAdapter(String pattern, @Nullable PathPatternParser parser) {
+			this.patternString = pattern;
+			this.pathPattern = initPathPattern(pattern, parser);
+		}
+
+		private static @Nullable PathPattern initPathPattern(String pattern, @Nullable PathPatternParser parser) {
+			try {
+				return (parser != null ? parser : PathPatternParser.defaultInstance).parse(pattern);
+			}
+			catch (PatternParseException ex) {
+				return null;
+			}
+		}
+
+		public String getPatternString() {
+			return this.patternString;
+		}
+
+		public boolean match(Object path, boolean isPathContainer, PathMatcher pathMatcher) {
+			if (isPathContainer) {
+				PathContainer pathContainer = (PathContainer) path;
+				if (this.pathPattern != null) {
+					return this.pathPattern.matches(pathContainer);
+				}
+				String lookupPath = pathContainer.value();
+				path = UrlPathHelper.defaultInstance.removeSemicolonContent(lookupPath);
+			}
+			return pathMatcher.match(this.patternString, (String) path);
+		}
+
+		public static PatternAdapter @Nullable [] initPatterns(
+				String @Nullable [] patterns, @Nullable PathPatternParser parser) {
+
+			if (ObjectUtils.isEmpty(patterns)) {
+				return null;
+			}
+			return Arrays.stream(patterns)
+					.map(pattern -> new PatternAdapter(pattern, parser))
+					.toArray(PatternAdapter[]::new);
+		}
 	}
 
 }

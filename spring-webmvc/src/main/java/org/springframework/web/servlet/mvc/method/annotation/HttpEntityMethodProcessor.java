@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,29 +19,32 @@ package org.springframework.web.servlet.mvc.method.annotation;
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ResolvableType;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.http.server.ServletServerHttpResponse;
-import org.springframework.lang.Nullable;
 import org.springframework.ui.ModelMap;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.bind.support.WebDataBinderFactory;
@@ -52,10 +55,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.support.RequestContextUtils;
 
 /**
- * Resolves {@link HttpEntity} and {@link RequestEntity} method argument values
- * and also handles {@link HttpEntity} and {@link ResponseEntity} return values.
+ * Resolves {@link HttpEntity} and {@link RequestEntity} method argument values,
+ * as well as return values of type {@link HttpEntity}, {@link ResponseEntity},
+ * {@link ErrorResponse} and {@link ProblemDetail}.
  *
- * <p>An {@link HttpEntity} return type has a specific purpose. Therefore this
+ * <p>An {@link HttpEntity} return type has a specific purpose. Therefore, this
  * handler should be configured ahead of handlers that support any return
  * value type annotated with {@code @ModelAttribute} or {@code @ResponseBody}
  * to ensure they don't take over.
@@ -63,6 +67,7 @@ import org.springframework.web.servlet.support.RequestContextUtils;
  * @author Arjen Poutsma
  * @author Rossen Stoyanchev
  * @author Brian Clozel
+ * @author Sam Brannen
  * @since 3.1
  */
 public class HttpEntityMethodProcessor extends AbstractMessageConverterMethodProcessor {
@@ -81,9 +86,7 @@ public class HttpEntityMethodProcessor extends AbstractMessageConverterMethodPro
 	 * Suitable for resolving {@code HttpEntity} and handling {@code ResponseEntity}
 	 * without {@code Request~} or {@code ResponseBodyAdvice}.
 	 */
-	public HttpEntityMethodProcessor(List<HttpMessageConverter<?>> converters,
-			ContentNegotiationManager manager) {
-
+	public HttpEntityMethodProcessor(List<HttpMessageConverter<?>> converters, ContentNegotiationManager manager) {
 		super(converters, manager);
 	}
 
@@ -100,13 +103,27 @@ public class HttpEntityMethodProcessor extends AbstractMessageConverterMethodPro
 	}
 
 	/**
-	 * Complete constructor for resolving {@code HttpEntity} and handling
-	 * {@code ResponseEntity}.
+	 * Variant of {@link #HttpEntityMethodProcessor(List, List)}
+	 * with an additional {@link ContentNegotiationManager} argument for return
+	 * value handling.
 	 */
 	public HttpEntityMethodProcessor(List<HttpMessageConverter<?>> converters,
 			@Nullable ContentNegotiationManager manager, List<Object> requestResponseBodyAdvice) {
 
 		super(converters, manager, requestResponseBodyAdvice);
+	}
+
+	/**
+	 * Variant of {@link #HttpEntityMethodProcessor(List, ContentNegotiationManager, List)}
+	 * with additional list of {@link ErrorResponse.Interceptor}s for return
+	 * value handling.
+	 * @since 6.2
+	 */
+	public HttpEntityMethodProcessor(List<HttpMessageConverter<?>> converters,
+			@Nullable ContentNegotiationManager manager, List<Object> requestResponseBodyAdvice,
+			List<ErrorResponse.Interceptor> interceptors) {
+
+		super(converters, manager, requestResponseBodyAdvice, interceptors);
 	}
 
 
@@ -118,13 +135,13 @@ public class HttpEntityMethodProcessor extends AbstractMessageConverterMethodPro
 
 	@Override
 	public boolean supportsReturnType(MethodParameter returnType) {
-		return (HttpEntity.class.isAssignableFrom(returnType.getParameterType()) &&
-				!RequestEntity.class.isAssignableFrom(returnType.getParameterType()));
+		Class<?> type = returnType.getParameterType();
+		return ((HttpEntity.class.isAssignableFrom(type) && !RequestEntity.class.isAssignableFrom(type)) ||
+				ErrorResponse.class.isAssignableFrom(type) || ProblemDetail.class.isAssignableFrom(type));
 	}
 
 	@Override
-	@Nullable
-	public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+	public @Nullable Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
 			NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory)
 			throws IOException, HttpMediaTypeNotSupportedException {
 
@@ -145,12 +162,10 @@ public class HttpEntityMethodProcessor extends AbstractMessageConverterMethodPro
 		}
 	}
 
-	@Nullable
-	private Type getHttpEntityType(MethodParameter parameter) {
+	private @Nullable Type getHttpEntityType(MethodParameter parameter) {
 		Assert.isAssignable(HttpEntity.class, parameter.getParameterType());
 		Type parameterType = parameter.getGenericParameterType();
-		if (parameterType instanceof ParameterizedType) {
-			ParameterizedType type = (ParameterizedType) parameterType;
+		if (parameterType instanceof ParameterizedType type) {
 			if (type.getActualTypeArguments().length != 1) {
 				throw new IllegalArgumentException("Expected single generic parameter on '" +
 						parameter.getParameterName() + "' in method " + parameter.getMethod());
@@ -177,14 +192,39 @@ public class HttpEntityMethodProcessor extends AbstractMessageConverterMethodPro
 		ServletServerHttpRequest inputMessage = createInputMessage(webRequest);
 		ServletServerHttpResponse outputMessage = createOutputMessage(webRequest);
 
-		Assert.isInstanceOf(HttpEntity.class, returnValue);
-		HttpEntity<?> responseEntity = (HttpEntity<?>) returnValue;
+		HttpEntity<?> httpEntity;
+		if (returnValue instanceof ErrorResponse response) {
+			httpEntity = new ResponseEntity<>(response.getBody(), response.getHeaders(), response.getStatusCode());
+		}
+		else if (returnValue instanceof ProblemDetail detail) {
+			httpEntity = ResponseEntity.of(detail).build();
+		}
+		else {
+			Assert.isInstanceOf(HttpEntity.class, returnValue);
+			httpEntity = (HttpEntity<?>) returnValue;
+		}
+
+		if (httpEntity.getBody() instanceof ProblemDetail detail) {
+			if (detail.getInstance() == null) {
+				URI path = URI.create(inputMessage.getServletRequest().getRequestURI());
+				detail.setInstance(path);
+			}
+			if (logger.isWarnEnabled() && httpEntity instanceof ResponseEntity<?> responseEntity) {
+				if (responseEntity.getStatusCode().value() != detail.getStatus()) {
+					logger.warn(returnType.getExecutable().toGenericString() +
+							" returned ResponseEntity: " + responseEntity + ", but its status" +
+							" doesn't match the ProblemDetail status: " + detail.getStatus());
+				}
+			}
+			invokeErrorResponseInterceptors(
+					detail, (returnValue instanceof ErrorResponse response ? response : null));
+		}
 
 		HttpHeaders outputHeaders = outputMessage.getHeaders();
-		HttpHeaders entityHeaders = responseEntity.getHeaders();
+		HttpHeaders entityHeaders = httpEntity.getHeaders();
 		if (!entityHeaders.isEmpty()) {
 			entityHeaders.forEach((key, value) -> {
-				if (HttpHeaders.VARY.equals(key) && outputHeaders.containsKey(HttpHeaders.VARY)) {
+				if (HttpHeaders.VARY.equals(key) && outputHeaders.containsHeader(HttpHeaders.VARY)) {
 					List<String> values = getVaryRequestHeadersToAdd(outputHeaders, entityHeaders);
 					if (!values.isEmpty()) {
 						outputHeaders.setVary(values);
@@ -196,8 +236,8 @@ public class HttpEntityMethodProcessor extends AbstractMessageConverterMethodPro
 			});
 		}
 
-		if (responseEntity instanceof ResponseEntity) {
-			int returnStatus = ((ResponseEntity<?>) responseEntity).getStatusCodeValue();
+		if (httpEntity instanceof ResponseEntity<?> responseEntity) {
+			int returnStatus = responseEntity.getStatusCode().value();
 			outputMessage.getServletResponse().setStatus(returnStatus);
 			if (returnStatus == 200) {
 				HttpMethod method = inputMessage.getMethod();
@@ -216,7 +256,7 @@ public class HttpEntityMethodProcessor extends AbstractMessageConverterMethodPro
 		}
 
 		// Try even with null body. ResponseBodyAdvice could get involved.
-		writeWithMessageConverters(responseEntity.getBody(), returnType, inputMessage, outputMessage);
+		writeWithMessageConverters(httpEntity.getBody(), returnType, inputMessage, outputMessage);
 
 		// Ensure headers are flushed even if no body was written.
 		outputMessage.flush();
@@ -261,8 +301,8 @@ public class HttpEntityMethodProcessor extends AbstractMessageConverterMethodPro
 	private void saveFlashAttributes(ModelAndViewContainer mav, NativeWebRequest request, String location) {
 		mav.setRedirectModelScenario(true);
 		ModelMap model = mav.getModel();
-		if (model instanceof RedirectAttributes) {
-			Map<String, ?> flashAttributes = ((RedirectAttributes) model).getFlashAttributes();
+		if (model instanceof RedirectAttributes redirectAttributes) {
+			Map<String, ?> flashAttributes = redirectAttributes.getFlashAttributes();
 			if (!CollectionUtils.isEmpty(flashAttributes)) {
 				HttpServletRequest req = request.getNativeRequest(HttpServletRequest.class);
 				HttpServletResponse res = request.getNativeResponse(HttpServletResponse.class);

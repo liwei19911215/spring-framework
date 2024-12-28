@@ -21,7 +21,7 @@ import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Generic interface for a web request. Mainly intended for generic web
@@ -39,97 +39,91 @@ public interface WebRequest extends RequestAttributes {
 	 * Return the request header of the given name, or {@code null} if none.
 	 * <p>Retrieves the first header value in case of a multi-value header.
 	 * @since 3.0
-	 * @see javax.servlet.http.HttpServletRequest#getHeader(String)
+	 * @see jakarta.servlet.http.HttpServletRequest#getHeader(String)
 	 */
-	@Nullable
-	String getHeader(String headerName);
+	@Nullable String getHeader(String headerName);
 
 	/**
 	 * Return the request header values for the given header name,
 	 * or {@code null} if none.
 	 * <p>A single-value header will be exposed as an array with a single element.
 	 * @since 3.0
-	 * @see javax.servlet.http.HttpServletRequest#getHeaders(String)
+	 * @see jakarta.servlet.http.HttpServletRequest#getHeaders(String)
 	 */
-	@Nullable
-	String[] getHeaderValues(String headerName);
+	String @Nullable [] getHeaderValues(String headerName);
 
 	/**
-	 * Return a Iterator over request header names.
+	 * Return an Iterator over request header names.
 	 * @since 3.0
-	 * @see javax.servlet.http.HttpServletRequest#getHeaderNames()
+	 * @see jakarta.servlet.http.HttpServletRequest#getHeaderNames()
 	 */
 	Iterator<String> getHeaderNames();
 
 	/**
 	 * Return the request parameter of the given name, or {@code null} if none.
 	 * <p>Retrieves the first parameter value in case of a multi-value parameter.
-	 * @see javax.servlet.http.HttpServletRequest#getParameter(String)
+	 * @see jakarta.servlet.http.HttpServletRequest#getParameter(String)
 	 */
-	@Nullable
-	String getParameter(String paramName);
+	@Nullable String getParameter(String paramName);
 
 	/**
 	 * Return the request parameter values for the given parameter name,
 	 * or {@code null} if none.
 	 * <p>A single-value parameter will be exposed as an array with a single element.
-	 * @see javax.servlet.http.HttpServletRequest#getParameterValues(String)
+	 * @see jakarta.servlet.http.HttpServletRequest#getParameterValues(String)
 	 */
-	@Nullable
-	String[] getParameterValues(String paramName);
+	String @Nullable [] getParameterValues(String paramName);
 
 	/**
-	 * Return a Iterator over request parameter names.
+	 * Return an Iterator over request parameter names.
 	 * @since 3.0
-	 * @see javax.servlet.http.HttpServletRequest#getParameterNames()
+	 * @see jakarta.servlet.http.HttpServletRequest#getParameterNames()
 	 */
 	Iterator<String> getParameterNames();
 
 	/**
-	 * Return a immutable Map of the request parameters, with parameter names as map keys
+	 * Return an immutable Map of the request parameters, with parameter names as map keys
 	 * and parameter values as map values. The map values will be of type String array.
 	 * <p>A single-value parameter will be exposed as an array with a single element.
-	 * @see javax.servlet.http.HttpServletRequest#getParameterMap()
+	 * @see jakarta.servlet.http.HttpServletRequest#getParameterMap()
 	 */
 	Map<String, String[]> getParameterMap();
 
 	/**
 	 * Return the primary Locale for this request.
-	 * @see javax.servlet.http.HttpServletRequest#getLocale()
+	 * @see jakarta.servlet.http.HttpServletRequest#getLocale()
 	 */
 	Locale getLocale();
 
 	/**
 	 * Return the context path for this request
 	 * (usually the base path that the current web application is mapped to).
-	 * @see javax.servlet.http.HttpServletRequest#getContextPath()
+	 * @see jakarta.servlet.http.HttpServletRequest#getContextPath()
 	 */
 	String getContextPath();
 
 	/**
 	 * Return the remote user for this request, if any.
-	 * @see javax.servlet.http.HttpServletRequest#getRemoteUser()
+	 * @see jakarta.servlet.http.HttpServletRequest#getRemoteUser()
 	 */
-	@Nullable
-	String getRemoteUser();
+	@Nullable String getRemoteUser();
 
 	/**
 	 * Return the user principal for this request, if any.
-	 * @see javax.servlet.http.HttpServletRequest#getUserPrincipal()
+	 * @see jakarta.servlet.http.HttpServletRequest#getUserPrincipal()
 	 */
-	@Nullable
-	Principal getUserPrincipal();
+	@Nullable Principal getUserPrincipal();
 
 	/**
 	 * Determine whether the user is in the given role for this request.
-	 * @see javax.servlet.http.HttpServletRequest#isUserInRole(String)
+	 * @see jakarta.servlet.http.HttpServletRequest#isUserInRole(String)
 	 */
 	boolean isUserInRole(String role);
 
 	/**
 	 * Return whether this request has been sent over a secure transport
 	 * mechanism (such as SSL).
-	 * @see javax.servlet.http.HttpServletRequest#isSecure()
+	 * @see jakarta.servlet.http.HttpServletRequest#isSecure()
 	 */
 	boolean isSecure();
 
@@ -154,7 +148,7 @@ public interface WebRequest extends RequestAttributes {
 	 * also with conditional POST/PUT/DELETE requests.
 	 * <p><strong>Note:</strong> you can use either
 	 * this {@code #checkNotModified(long)} method; or
-	 * {@link #checkNotModified(String)}. If you want enforce both
+	 * {@link #checkNotModified(String)}. If you want to enforce both
 	 * a strong entity tag and a Last-Modified value,
 	 * as recommended by the HTTP specification,
 	 * then you should use {@link #checkNotModified(String, long)}.
@@ -189,7 +183,7 @@ public interface WebRequest extends RequestAttributes {
 	 * }</pre>
 	 * <p><strong>Note:</strong> you can use either
 	 * this {@code #checkNotModified(String)} method; or
-	 * {@link #checkNotModified(long)}. If you want enforce both
+	 * {@link #checkNotModified(long)}. If you want to enforce both
 	 * a strong entity tag and a Last-Modified value,
 	 * as recommended by the HTTP specification,
 	 * then you should use {@link #checkNotModified(String, long)}.
@@ -223,7 +217,7 @@ public interface WebRequest extends RequestAttributes {
 	 * also with conditional POST/PUT/DELETE requests.
 	 * <p><strong>Note:</strong> The HTTP specification recommends
 	 * setting both ETag and Last-Modified values, but you can also
-	 * use {@code #checkNotModified(String)} or
+	 * use {@link #checkNotModified(String)} or
 	 * {@link #checkNotModified(long)}.
 	 * @param etag the entity tag that the application determined
 	 * for the underlying resource. This parameter will be padded

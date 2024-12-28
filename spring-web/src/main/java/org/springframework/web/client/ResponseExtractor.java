@@ -19,11 +19,12 @@ package org.springframework.web.client;
 import java.io.IOException;
 import java.lang.reflect.Type;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.http.client.ClientHttpResponse;
-import org.springframework.lang.Nullable;
 
 /**
- * Generic callback interface used by {@link RestTemplate}'s retrieval methods
+ * Generic callback interface used by {@link RestTemplate}'s retrieval methods.
  * Implementations of this interface perform the actual work of extracting data
  * from a {@link ClientHttpResponse}, but don't need to worry about exception
  * handling or closing resources.
@@ -46,7 +47,6 @@ public interface ResponseExtractor<T> {
 	 * @return the extracted data
 	 * @throws IOException in case of I/O errors
 	 */
-	@Nullable
-	T extractData(ClientHttpResponse response) throws IOException;
+	@Nullable T extractData(ClientHttpResponse response) throws IOException;
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,9 +26,7 @@ import org.apache.commons.logging.LogFactory;
 /**
  * Factory for common {@link Log} delegates with Spring's logging conventions.
  *
- * <p>Mainly for internal use within the framework with Apache Commons Logging,
- * typically in the form of the {@code spring-jcl} bridge but also compatible
- * with other Commons Logging bridges.
+ * <p>Mainly for internal use within the framework with Apache Commons Logging.
  *
  * @author Rossen Stoyanchev
  * @author Juergen Hoeller
@@ -46,7 +44,7 @@ public final class LogDelegateFactory {
 	 * secondary logger if logging for the primary logger is not enabled.
 	 * <p>This may be used for fallback logging from lower-level packages that
 	 * logically should log together with some higher-level package but the two
-	 * don't happen to share a suitable parent package (e.g. logging for the web
+	 * don't happen to share a suitable parent package (for example, logging for the web
 	 * and lower-level http and codec packages). For such cases the primary
 	 * (class-based) logger can be wrapped with a shared fallback logger.
 	 * @param primaryLogger primary logger to try first
@@ -63,15 +61,28 @@ public final class LogDelegateFactory {
 	}
 
 	/**
-	 * Create a "hidden" logger whose name is intentionally prefixed with "_"
-	 * because its output is either too verbose or otherwise deemed as optional
-	 * or unnecessary to see at any log level by default under the normal package
-	 * based log hierarchy.
+	 * Create a "hidden" logger with a category name prefixed with "_", thus
+	 * precluding it from being enabled together with other log categories from
+	 * the same package. This is useful for specialized output that is either
+	 * too verbose or otherwise optional or unnecessary to see all the time.
 	 * @param clazz the class for which to create a logger
-	 * @return a logger for the hidden category ("_" + fully-qualified class name)
+	 * @return a Log with the category {@code "_" + fully-qualified class name}
 	 */
 	public static Log getHiddenLog(Class<?> clazz) {
-		return LogFactory.getLog("_" + clazz.getName());
+		return getHiddenLog(clazz.getName());
+	}
+
+	/**
+	 * Create a "hidden" logger with a category name prefixed with "_", thus
+	 * precluding it from being enabled together with other log categories from
+	 * the same package. This is useful for specialized output that is either
+	 * too verbose or otherwise optional or unnecessary to see all the time.
+	 * @param category the log category to use
+	 * @return a Log with the category {@code "_" + category}
+	 * @since 5.3.5
+	 */
+	public static Log getHiddenLog(String category) {
+		return LogFactory.getLog("_" + category);
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2016 the original author or authors.
+ * Copyright 2002-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,29 +20,27 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import javax.websocket.Extension;
+import jakarta.websocket.Extension;
 
 import org.springframework.util.LinkedCaseInsensitiveMap;
 import org.springframework.web.socket.WebSocketExtension;
 
 /**
- * A sub-class of {@link org.springframework.web.socket.WebSocketExtension} that
- * can be constructed from an {@link javax.websocket.Extension}.
+ * A subclass of {@link WebSocketExtension} that can be constructed from a
+ * {@link jakarta.websocket.Extension}.
  *
  * @author Rossen Stoyanchev
  * @since 4.0
  */
 public class StandardToWebSocketExtensionAdapter extends WebSocketExtension {
 
-
 	public StandardToWebSocketExtensionAdapter(Extension extension) {
 		super(extension.getName(), initParameters(extension));
 	}
 
-
 	private static Map<String, String> initParameters(Extension extension) {
 		List<Extension.Parameter> parameters = extension.getParameters();
-		Map<String, String> result = new LinkedCaseInsensitiveMap<>(parameters.size(), Locale.ENGLISH);
+		Map<String, String> result = new LinkedCaseInsensitiveMap<>(parameters.size(), Locale.ROOT);
 		for (Extension.Parameter parameter : parameters) {
 			result.put(parameter.getName(), parameter.getValue());
 		}

@@ -20,12 +20,12 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Mono;
 
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseCookie;
-import org.springframework.lang.Nullable;
 import org.springframework.util.MultiValueMap;
 
 /**
@@ -134,7 +134,7 @@ public interface RenderingResponse extends ServerResponse {
 		 * @param status the response status
 		 * @return this builder
 		 */
-		Builder status(HttpStatus status);
+		Builder status(HttpStatusCode status);
 
 		/**
 		 * Set the HTTP status.

@@ -21,14 +21,14 @@ import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletContext;
+import org.jspecify.annotations.Nullable;
 
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * Mock implementation of the {@link javax.servlet.ServletConfig} interface.
+ * Mock implementation of the {@link jakarta.servlet.ServletConfig} interface.
  *
  * @author Rod Johnson
  * @author Juergen Hoeller
@@ -93,7 +93,7 @@ public class MockServletConfig implements ServletConfig {
 	}
 
 	@Override
-	public String getInitParameter(String name) {
+	public @Nullable String getInitParameter(String name) {
 		Assert.notNull(name, "Parameter name must not be null");
 		return this.initParameters.get(name);
 	}

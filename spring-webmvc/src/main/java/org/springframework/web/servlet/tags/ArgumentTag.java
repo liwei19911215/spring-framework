@@ -16,10 +16,9 @@
 
 package org.springframework.web.servlet.tags;
 
-import javax.servlet.jsp.JspException;
-import javax.servlet.jsp.tagext.BodyTagSupport;
-
-import org.springframework.lang.Nullable;
+import jakarta.servlet.jsp.JspException;
+import jakarta.servlet.jsp.tagext.BodyTagSupport;
+import org.jspecify.annotations.Nullable;
 
 /**
  * The {@code <argument>} tag is based on the JSTL {@code fmt:param} tag.
@@ -55,8 +54,7 @@ import org.springframework.lang.Nullable;
 @SuppressWarnings("serial")
 public class ArgumentTag extends BodyTagSupport {
 
-	@Nullable
-	private Object value;
+	private @Nullable Object value;
 
 	private boolean valueSet;
 

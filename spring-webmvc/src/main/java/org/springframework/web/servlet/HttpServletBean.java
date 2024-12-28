@@ -20,12 +20,12 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Set;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeansException;
@@ -40,7 +40,6 @@ import org.springframework.core.env.EnvironmentCapable;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceEditor;
 import org.springframework.core.io.ResourceLoader;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -48,7 +47,7 @@ import org.springframework.web.context.support.ServletContextResourceLoader;
 import org.springframework.web.context.support.StandardServletEnvironment;
 
 /**
- * Simple extension of {@link javax.servlet.http.HttpServlet} which treats
+ * Simple extension of {@link jakarta.servlet.http.HttpServlet} which treats
  * its config parameters ({@code init-param} entries within the
  * {@code servlet} tag in {@code web.xml}) as bean properties.
  *
@@ -85,8 +84,7 @@ public abstract class HttpServletBean extends HttpServlet implements Environment
 	/** Logger available to subclasses. */
 	protected final Log logger = LogFactory.getLog(getClass());
 
-	@Nullable
-	private ConfigurableEnvironment environment;
+	private @Nullable ConfigurableEnvironment environment;
 
 	private final Set<String> requiredProperties = new HashSet<>(4);
 
@@ -197,8 +195,7 @@ public abstract class HttpServletBean extends HttpServlet implements Environment
 	 * @see #getServletConfig()
 	 */
 	@Override
-	@Nullable
-	public String getServletName() {
+	public @Nullable String getServletName() {
 		return (getServletConfig() != null ? getServletConfig().getServletName() : null);
 	}
 

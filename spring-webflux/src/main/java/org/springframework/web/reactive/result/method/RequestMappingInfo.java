@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -70,8 +71,7 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 	private static final RequestConditionHolder EMPTY_CUSTOM = new RequestConditionHolder(null);
 
 
-	@Nullable
-	private final String name;
+	private final @Nullable String name;
 
 	private final PatternsRequestCondition patternsCondition;
 
@@ -89,29 +89,27 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 
 	private final int hashCode;
 
+	private final BuilderConfiguration options;
 
+
+	/**
+	 * Full constructor with a mapping name.
+	 * @deprecated as of 5.3.4 in favor using {@link RequestMappingInfo.Builder} via {@link #paths(String...)}.
+	 */
+	@Deprecated
 	public RequestMappingInfo(@Nullable String name, @Nullable PatternsRequestCondition patterns,
 			@Nullable RequestMethodsRequestCondition methods, @Nullable ParamsRequestCondition params,
 			@Nullable HeadersRequestCondition headers, @Nullable ConsumesRequestCondition consumes,
 			@Nullable ProducesRequestCondition produces, @Nullable RequestCondition<?> custom) {
 
-		this.name = (StringUtils.hasText(name) ? name : null);
-		this.patternsCondition = (patterns != null ? patterns : EMPTY_PATTERNS);
-		this.methodsCondition = (methods != null ? methods : EMPTY_REQUEST_METHODS);
-		this.paramsCondition = (params != null ? params : EMPTY_PARAMS);
-		this.headersCondition = (headers != null ? headers : EMPTY_HEADERS);
-		this.consumesCondition = (consumes != null ? consumes : EMPTY_CONSUMES);
-		this.producesCondition = (produces != null ? produces : EMPTY_PRODUCES);
-		this.customConditionHolder = (custom != null ? new RequestConditionHolder(custom) : EMPTY_CUSTOM);
-
-		this.hashCode = calculateHashCode(
-				this.patternsCondition, this.methodsCondition, this.paramsCondition, this.headersCondition,
-				this.consumesCondition, this.producesCondition, this.customConditionHolder);
+		this(name, patterns, methods, params, headers, consumes, produces, custom, new BuilderConfiguration());
 	}
 
 	/**
-	 * Creates a new instance with the given request conditions.
+	 * Create an instance with the given conditions.
+	 * @deprecated as of 5.3.4 in favor using {@link RequestMappingInfo.Builder} via {@link #paths(String...)}.
 	 */
+	@Deprecated
 	public RequestMappingInfo(@Nullable PatternsRequestCondition patterns,
 			@Nullable RequestMethodsRequestCondition methods, @Nullable ParamsRequestCondition params,
 			@Nullable HeadersRequestCondition headers, @Nullable ConsumesRequestCondition consumes,
@@ -122,18 +120,40 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 
 	/**
 	 * Re-create a RequestMappingInfo with the given custom request condition.
+	 * @deprecated since 5.3.4 in favor of using a {@link Builder} via {@link #mutate()}.
 	 */
+	@Deprecated
 	public RequestMappingInfo(RequestMappingInfo info, @Nullable RequestCondition<?> customRequestCondition) {
 		this(info.name, info.patternsCondition, info.methodsCondition, info.paramsCondition, info.headersCondition,
 				info.consumesCondition, info.producesCondition, customRequestCondition);
+	}
+
+	private RequestMappingInfo(@Nullable String name, @Nullable PatternsRequestCondition patterns,
+			@Nullable RequestMethodsRequestCondition methods, @Nullable ParamsRequestCondition params,
+			@Nullable HeadersRequestCondition headers, @Nullable ConsumesRequestCondition consumes,
+			@Nullable ProducesRequestCondition produces, @Nullable RequestCondition<?> custom,
+			BuilderConfiguration options) {
+
+		this.name = (StringUtils.hasText(name) ? name : null);
+		this.patternsCondition = (patterns != null ? patterns : EMPTY_PATTERNS);
+		this.methodsCondition = (methods != null ? methods : EMPTY_REQUEST_METHODS);
+		this.paramsCondition = (params != null ? params : EMPTY_PARAMS);
+		this.headersCondition = (headers != null ? headers : EMPTY_HEADERS);
+		this.consumesCondition = (consumes != null ? consumes : EMPTY_CONSUMES);
+		this.producesCondition = (produces != null ? produces : EMPTY_PRODUCES);
+		this.customConditionHolder = (custom != null ? new RequestConditionHolder(custom) : EMPTY_CUSTOM);
+		this.options = options;
+
+		this.hashCode = calculateHashCode(
+				this.patternsCondition, this.methodsCondition, this.paramsCondition, this.headersCondition,
+				this.consumesCondition, this.producesCondition, this.customConditionHolder);
 	}
 
 
 	/**
 	 * Return the name for this mapping, or {@code null}.
 	 */
-	@Nullable
-	public String getName() {
+	public @Nullable String getName() {
 		return this.name;
 	}
 
@@ -196,8 +216,7 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 	/**
 	 * Returns the "custom" condition of this {@link RequestMappingInfo}; or {@code null}.
 	 */
-	@Nullable
-	public RequestCondition<?> getCustomCondition() {
+	public @Nullable RequestCondition<?> getCustomCondition() {
 		return this.customConditionHolder.getCondition();
 	}
 
@@ -219,11 +238,10 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 		RequestConditionHolder custom = this.customConditionHolder.combine(other.customConditionHolder);
 
 		return new RequestMappingInfo(name, patterns,
-				methods, params, headers, consumes, produces, custom.getCondition());
+				methods, params, headers, consumes, produces, custom.getCondition(), this.options);
 	}
 
-	@Nullable
-	private String combineNames(RequestMappingInfo other) {
+	private @Nullable String combineNames(RequestMappingInfo other) {
 		if (this.name != null && other.name != null) {
 			return this.name + "#" + other.name;
 		}
@@ -243,8 +261,7 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 	 * @return a new instance in case all conditions match; or {@code null} otherwise
 	 */
 	@Override
-	@Nullable
-	public RequestMappingInfo getMatchingCondition(ServerWebExchange exchange) {
+	public @Nullable RequestMappingInfo getMatchingCondition(ServerWebExchange exchange) {
 		RequestMethodsRequestCondition methods = this.methodsCondition.getMatchingCondition(exchange);
 		if (methods == null) {
 			return null;
@@ -275,7 +292,7 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 			return null;
 		}
 		return new RequestMappingInfo(this.name, patterns,
-				methods, params, headers, consumes, produces, custom.getCondition());
+				methods, params, headers, consumes, produces, custom.getCondition(), this.options);
 	}
 
 	/**
@@ -319,20 +336,14 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		if (this == other) {
-			return true;
-		}
-		if (!(other instanceof RequestMappingInfo)) {
-			return false;
-		}
-		RequestMappingInfo otherInfo = (RequestMappingInfo) other;
-		return (this.patternsCondition.equals(otherInfo.patternsCondition) &&
-				this.methodsCondition.equals(otherInfo.methodsCondition) &&
-				this.paramsCondition.equals(otherInfo.paramsCondition) &&
-				this.headersCondition.equals(otherInfo.headersCondition) &&
-				this.consumesCondition.equals(otherInfo.consumesCondition) &&
-				this.producesCondition.equals(otherInfo.producesCondition) &&
-				this.customConditionHolder.equals(otherInfo.customConditionHolder));
+		return (this == other || (other instanceof RequestMappingInfo that &&
+				this.patternsCondition.equals(that.patternsCondition) &&
+				this.methodsCondition.equals(that.methodsCondition) &&
+				this.paramsCondition.equals(that.paramsCondition) &&
+				this.headersCondition.equals(that.headersCondition) &&
+				this.consumesCondition.equals(that.consumesCondition) &&
+				this.producesCondition.equals(that.producesCondition) &&
+				this.customConditionHolder.equals(that.customConditionHolder)));
 	}
 
 	@Override
@@ -359,7 +370,7 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 		}
 		if (!this.patternsCondition.isEmpty()) {
 			Set<PathPattern> patterns = this.patternsCondition.getPatterns();
-			builder.append(" ").append(patterns.size() == 1 ? patterns.iterator().next() : patterns);
+			builder.append(' ').append(patterns.size() == 1 ? patterns.iterator().next() : patterns);
 		}
 		if (!this.paramsCondition.isEmpty()) {
 			builder.append(", params ").append(this.paramsCondition);
@@ -380,6 +391,15 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 		return builder.toString();
 	}
 
+
+	/**
+	 * Return a builder to create a new RequestMappingInfo by modifying this one.
+	 * @return a builder to create a new, modified instance
+	 * @since 5.3.4
+	 */
+	public Builder mutate() {
+		return new MutateBuilder(this);
+	}
 
 	/**
 	 * Create a new {@code RequestMappingInfo.Builder} with the given paths.
@@ -452,30 +472,23 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 
 		private String[] paths;
 
-		@Nullable
-		private RequestMethod[] methods;
+		private RequestMethod @Nullable [] methods;
 
-		@Nullable
-		private String[] params;
+		private String @Nullable [] params;
 
-		@Nullable
-		private String[] headers;
+		private String @Nullable [] headers;
 
-		@Nullable
-		private String[] consumes;
+		private String @Nullable [] consumes;
 
-		@Nullable
-		private String[] produces;
+		private String @Nullable [] produces;
 
 		private boolean hasContentType;
 
 		private boolean hasAccept;
 
-		@Nullable
-		private String mappingName;
+		private @Nullable String mappingName;
 
-		@Nullable
-		private RequestCondition<?> customCondition;
+		private @Nullable RequestCondition<?> customCondition;
 
 		private BuilderConfiguration options = new BuilderConfiguration();
 
@@ -546,7 +559,6 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 
 		@Override
 		public RequestMappingInfo build() {
-
 			PathPatternParser parser = (this.options.getPatternParser() != null ?
 					this.options.getPatternParser() : PathPatternParser.defaultInstance);
 
@@ -564,24 +576,23 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 							null : new ConsumesRequestCondition(this.consumes, this.headers),
 					ObjectUtils.isEmpty(this.produces) && !this.hasAccept ?
 							null : new ProducesRequestCondition(this.produces, this.headers, contentTypeResolver),
-					this.customCondition);
+					this.customCondition,
+					this.options);
 		}
 
-		private static List<PathPattern> parse(String[] patterns, PathPatternParser parser) {
+		static List<PathPattern> parse(String[] patterns, PathPatternParser parser) {
 			if (isEmpty(patterns)) {
 				return Collections.emptyList();
 			}
 			List<PathPattern> result = new ArrayList<>(patterns.length);
-			for (String path : patterns) {
-				if (StringUtils.hasText(path) && !path.startsWith("/")) {
-					path = "/" + path;
-				}
-				result.add(parser.parse(path));
+			for (String pattern : patterns) {
+				pattern = parser.initFullPathPattern(pattern);
+				result.add(parser.parse(pattern));
 			}
 			return result;
 		}
 
-		private static boolean isEmpty(String[] patterns) {
+		static boolean isEmpty(String[] patterns) {
 			if (!ObjectUtils.isEmpty(patterns)) {
 				for (String pattern : patterns) {
 					if (StringUtils.hasText(pattern)) {
@@ -594,6 +605,111 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 	}
 
 
+	private static class MutateBuilder implements Builder {
+
+		private @Nullable String name;
+
+		private @Nullable PatternsRequestCondition patternsCondition;
+
+		private RequestMethodsRequestCondition methodsCondition;
+
+		private ParamsRequestCondition paramsCondition;
+
+		private HeadersRequestCondition headersCondition;
+
+		private ConsumesRequestCondition consumesCondition;
+
+		private ProducesRequestCondition producesCondition;
+
+		private RequestConditionHolder customConditionHolder;
+
+		private BuilderConfiguration options;
+
+		public MutateBuilder(RequestMappingInfo other) {
+			this.name = other.name;
+			this.patternsCondition = other.patternsCondition;
+			this.methodsCondition = other.methodsCondition;
+			this.paramsCondition = other.paramsCondition;
+			this.headersCondition = other.headersCondition;
+			this.consumesCondition = other.consumesCondition;
+			this.producesCondition = other.producesCondition;
+			this.customConditionHolder = other.customConditionHolder;
+			this.options = other.options;
+		}
+
+		@Override
+		public Builder paths(String... paths) {
+			PathPatternParser parser = (this.options.getPatternParser() != null ?
+					this.options.getPatternParser() : PathPatternParser.defaultInstance);
+			this.patternsCondition = (DefaultBuilder.isEmpty(paths) ?
+					null : new PatternsRequestCondition(DefaultBuilder.parse(paths, parser)));
+			return this;
+		}
+
+		@Override
+		public Builder methods(RequestMethod... methods) {
+			this.methodsCondition = (ObjectUtils.isEmpty(methods) ?
+					EMPTY_REQUEST_METHODS : new RequestMethodsRequestCondition(methods));
+			return this;
+		}
+
+		@Override
+		public Builder params(String... params) {
+			this.paramsCondition = (ObjectUtils.isEmpty(params) ?
+					EMPTY_PARAMS : new ParamsRequestCondition(params));
+			return this;
+		}
+
+		@Override
+		public Builder headers(String... headers) {
+			this.headersCondition = (ObjectUtils.isEmpty(headers) ?
+					EMPTY_HEADERS : new HeadersRequestCondition(headers));
+			return this;
+		}
+
+		@Override
+		public Builder consumes(String... consumes) {
+			this.consumesCondition = (ObjectUtils.isEmpty(consumes) ?
+					EMPTY_CONSUMES : new ConsumesRequestCondition(consumes));
+			return this;
+		}
+
+		@Override
+		public Builder produces(String... produces) {
+			this.producesCondition = (ObjectUtils.isEmpty(produces) ?
+					EMPTY_PRODUCES :
+					new ProducesRequestCondition(produces, null, this.options.getContentTypeResolver()));
+			return this;
+		}
+
+		@Override
+		public Builder mappingName(String name) {
+			this.name = name;
+			return this;
+		}
+
+		@Override
+		public Builder customCondition(RequestCondition<?> condition) {
+			this.customConditionHolder = new RequestConditionHolder(condition);
+			return this;
+		}
+
+		@Override
+		public Builder options(BuilderConfiguration options) {
+			this.options = options;
+			return this;
+		}
+
+		@Override
+		public RequestMappingInfo build() {
+			return new RequestMappingInfo(this.name, this.patternsCondition,
+					this.methodsCondition, this.paramsCondition, this.headersCondition,
+					this.consumesCondition, this.producesCondition,
+					this.customConditionHolder, this.options);
+		}
+	}
+
+
 	/**
 	 * Container for configuration options used for request mapping purposes.
 	 * Such configuration is required to create RequestMappingInfo instances but
@@ -602,18 +718,15 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 	 */
 	public static class BuilderConfiguration {
 
-		@Nullable
-		private PathPatternParser patternParser;
+		private @Nullable PathPatternParser patternParser;
 
-		@Nullable
-		private RequestedContentTypeResolver contentTypeResolver;
+		private @Nullable RequestedContentTypeResolver contentTypeResolver;
 
 		public void setPatternParser(PathPatternParser patternParser) {
 			this.patternParser = patternParser;
 		}
 
-		@Nullable
-		public PathPatternParser getPatternParser() {
+		public @Nullable PathPatternParser getPatternParser() {
 			return this.patternParser;
 		}
 
@@ -625,8 +738,7 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 			this.contentTypeResolver = resolver;
 		}
 
-		@Nullable
-		public RequestedContentTypeResolver getContentTypeResolver() {
+		public @Nullable RequestedContentTypeResolver getContentTypeResolver() {
 			return this.contentTypeResolver;
 		}
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,15 @@
 
 package org.springframework.web.context.support;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletContext;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.support.StaticApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourcePatternResolver;
-import org.springframework.lang.Nullable;
 import org.springframework.ui.context.Theme;
 import org.springframework.ui.context.ThemeSource;
 import org.springframework.ui.context.support.UiApplicationContextUtils;
@@ -42,7 +42,7 @@ import org.springframework.web.context.ServletContextAware;
  * despite not actually supporting external configuration files.
  *
  * <p>Interprets resource paths as servlet context resources, i.e. as paths beneath
- * the web application root. Absolute paths, e.g. for files outside the web app root,
+ * the web application root. Absolute paths, for example, for files outside the web app root,
  * can be accessed via "file:" URLs, as implemented by
  * {@link org.springframework.core.io.DefaultResourceLoader}.
  *
@@ -50,25 +50,23 @@ import org.springframework.web.context.ServletContextAware;
  * {@link org.springframework.context.support.AbstractApplicationContext},
  * this class detects a bean of type {@link org.springframework.ui.context.ThemeSource}
  * in the context, under the special bean name "themeSource".
+ * Theme support is deprecated as of 6.0 with no direct replacement.
  *
  * @author Rod Johnson
  * @author Juergen Hoeller
  * @see org.springframework.ui.context.ThemeSource
  */
+@SuppressWarnings("deprecation")
 public class StaticWebApplicationContext extends StaticApplicationContext
 		implements ConfigurableWebApplicationContext, ThemeSource {
 
-	@Nullable
-	private ServletContext servletContext;
+	private @Nullable ServletContext servletContext;
 
-	@Nullable
-	private ServletConfig servletConfig;
+	private @Nullable ServletConfig servletConfig;
 
-	@Nullable
-	private String namespace;
+	private @Nullable String namespace;
 
-	@Nullable
-	private ThemeSource themeSource;
+	private @Nullable ThemeSource themeSource;
 
 
 	public StaticWebApplicationContext() {
@@ -85,8 +83,7 @@ public class StaticWebApplicationContext extends StaticApplicationContext
 	}
 
 	@Override
-	@Nullable
-	public ServletContext getServletContext() {
+	public @Nullable ServletContext getServletContext() {
 		return this.servletContext;
 	}
 
@@ -99,8 +96,7 @@ public class StaticWebApplicationContext extends StaticApplicationContext
 	}
 
 	@Override
-	@Nullable
-	public ServletConfig getServletConfig() {
+	public @Nullable ServletConfig getServletConfig() {
 		return this.servletConfig;
 	}
 
@@ -113,8 +109,7 @@ public class StaticWebApplicationContext extends StaticApplicationContext
 	}
 
 	@Override
-	@Nullable
-	public String getNamespace() {
+	public @Nullable String getNamespace() {
 		return this.namespace;
 	}
 
@@ -137,7 +132,7 @@ public class StaticWebApplicationContext extends StaticApplicationContext
 	}
 
 	@Override
-	public String[] getConfigLocations() {
+	public String @Nullable [] getConfigLocations() {
 		return null;
 	}
 
@@ -197,8 +192,8 @@ public class StaticWebApplicationContext extends StaticApplicationContext
 	}
 
 	@Override
-	@Nullable
-	public Theme getTheme(String themeName) {
+	@Deprecated
+	public @Nullable Theme getTheme(String themeName) {
 		Assert.state(this.themeSource != null, "No ThemeSource available");
 		return this.themeSource.getTheme(themeName);
 	}

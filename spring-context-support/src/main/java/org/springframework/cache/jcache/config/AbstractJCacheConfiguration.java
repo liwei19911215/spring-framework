@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,16 +18,16 @@ package org.springframework.cache.jcache.config;
 
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.cache.annotation.AbstractCachingConfiguration;
-import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.cache.interceptor.CacheResolver;
 import org.springframework.cache.jcache.interceptor.DefaultJCacheOperationSource;
 import org.springframework.cache.jcache.interceptor.JCacheOperationSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Role;
-import org.springframework.lang.Nullable;
 
 /**
  * Abstract JSR-107 specific {@code @Configuration} class providing common
@@ -41,16 +41,18 @@ import org.springframework.lang.Nullable;
 @Configuration(proxyBeanMethods = false)
 public abstract class AbstractJCacheConfiguration extends AbstractCachingConfiguration {
 
-	@Nullable
-	protected Supplier<CacheResolver> exceptionCacheResolver;
+	protected @Nullable Supplier<CacheResolver> exceptionCacheResolver;
 
 
 	@Override
-	protected void useCachingConfigurer(CachingConfigurer config) {
-		super.useCachingConfigurer(config);
-		if (config instanceof JCacheConfigurer) {
-			this.exceptionCacheResolver = ((JCacheConfigurer) config)::exceptionCacheResolver;
-		}
+	protected void useCachingConfigurer(CachingConfigurerSupplier cachingConfigurerSupplier) {
+		super.useCachingConfigurer(cachingConfigurerSupplier);
+		this.exceptionCacheResolver = cachingConfigurerSupplier.adapt(config -> {
+			if (config instanceof JCacheConfigurer jcacheConfigurer) {
+				return jcacheConfigurer.exceptionCacheResolver();
+			}
+			return null;
+		});
 	}
 
 	@Bean(name = "jCacheOperationSource")

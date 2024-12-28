@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,11 +25,11 @@ import org.aspectj.lang.Signature;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.aspectj.lang.reflect.SourceLocation;
 import org.aspectj.runtime.internal.AroundClosure;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.aop.ProxyMethodInvocation;
 import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.ParameterNameDiscoverer;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -55,16 +55,13 @@ public class MethodInvocationProceedingJoinPoint implements ProceedingJoinPoint,
 
 	private final ProxyMethodInvocation methodInvocation;
 
-	@Nullable
-	private Object[] args;
+	private Object @Nullable [] args;
 
 	/** Lazily initialized signature object. */
-	@Nullable
-	private Signature signature;
+	private @Nullable Signature signature;
 
 	/** Lazily initialized source location object. */
-	@Nullable
-	private SourceLocation sourceLocation;
+	private @Nullable SourceLocation sourceLocation;
 
 
 	/**
@@ -84,14 +81,12 @@ public class MethodInvocationProceedingJoinPoint implements ProceedingJoinPoint,
 	}
 
 	@Override
-	@Nullable
-	public Object proceed() throws Throwable {
+	public @Nullable Object proceed() throws Throwable {
 		return this.methodInvocation.invocableClone().proceed();
 	}
 
 	@Override
-	@Nullable
-	public Object proceed(Object[] arguments) throws Throwable {
+	public @Nullable Object proceed(Object[] arguments) throws Throwable {
 		Assert.notNull(arguments, "Argument array passed to proceed cannot be null");
 		if (arguments.length != this.methodInvocation.getArguments().length) {
 			throw new IllegalArgumentException("Expecting " +
@@ -114,8 +109,7 @@ public class MethodInvocationProceedingJoinPoint implements ProceedingJoinPoint,
 	 * Returns the Spring AOP target. May be {@code null} if there is no target.
 	 */
 	@Override
-	@Nullable
-	public Object getTarget() {
+	public @Nullable Object getTarget() {
 		return this.methodInvocation.getThis();
 	}
 
@@ -180,8 +174,7 @@ public class MethodInvocationProceedingJoinPoint implements ProceedingJoinPoint,
 	 */
 	private class MethodSignatureImpl implements MethodSignature {
 
-		@Nullable
-		private volatile String[] parameterNames;
+		private volatile String @Nullable [] parameterNames;
 
 		@Override
 		public String getName() {
@@ -219,12 +212,13 @@ public class MethodInvocationProceedingJoinPoint implements ProceedingJoinPoint,
 		}
 
 		@Override
-		@Nullable
-		public String[] getParameterNames() {
-			if (this.parameterNames == null) {
-				this.parameterNames = parameterNameDiscoverer.getParameterNames(getMethod());
+		public String @Nullable [] getParameterNames() {
+			String[] parameterNames = this.parameterNames;
+			if (parameterNames == null) {
+				parameterNames = parameterNameDiscoverer.getParameterNames(getMethod());
+				this.parameterNames = parameterNames;
 			}
-			return this.parameterNames;
+			return parameterNames;
 		}
 
 		@Override
@@ -253,19 +247,19 @@ public class MethodInvocationProceedingJoinPoint implements ProceedingJoinPoint,
 			StringBuilder sb = new StringBuilder();
 			if (includeModifier) {
 				sb.append(Modifier.toString(getModifiers()));
-				sb.append(" ");
+				sb.append(' ');
 			}
 			if (includeReturnTypeAndArgs) {
 				appendType(sb, getReturnType(), useLongReturnAndArgumentTypeName);
-				sb.append(" ");
+				sb.append(' ');
 			}
 			appendType(sb, getDeclaringType(), useLongTypeName);
-			sb.append(".");
+			sb.append('.');
 			sb.append(getMethod().getName());
-			sb.append("(");
+			sb.append('(');
 			Class<?>[] parametersTypes = getParameterTypes();
 			appendTypes(sb, parametersTypes, includeReturnTypeAndArgs, useLongReturnAndArgumentTypeName);
-			sb.append(")");
+			sb.append(')');
 			return sb.toString();
 		}
 
@@ -276,7 +270,7 @@ public class MethodInvocationProceedingJoinPoint implements ProceedingJoinPoint,
 				for (int size = types.length, i = 0; i < size; i++) {
 					appendType(sb, types[i], useLongReturnAndArgumentTypeName);
 					if (i < size - 1) {
-						sb.append(",");
+						sb.append(',');
 					}
 				}
 			}
@@ -289,7 +283,7 @@ public class MethodInvocationProceedingJoinPoint implements ProceedingJoinPoint,
 
 		private void appendType(StringBuilder sb, Class<?> type, boolean useLongTypeName) {
 			if (type.isArray()) {
-				appendType(sb, type.getComponentType(), useLongTypeName);
+				appendType(sb, type.componentType(), useLongTypeName);
 				sb.append("[]");
 			}
 			else {

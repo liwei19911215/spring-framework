@@ -18,7 +18,7 @@ package org.springframework.web.servlet.resource;
 
 import java.io.IOException;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.springframework.core.io.Resource;
 
@@ -34,7 +34,7 @@ public interface ResourceTransformerChain {
 	/**
 	 * Return the {@code ResourceResolverChain} that was used to resolve the
 	 * {@code Resource} being transformed. This may be needed for resolving
-	 * related resources, e.g. links to other resources.
+	 * related resources, for example, links to other resources.
 	 */
 	ResourceResolverChain getResolverChain();
 

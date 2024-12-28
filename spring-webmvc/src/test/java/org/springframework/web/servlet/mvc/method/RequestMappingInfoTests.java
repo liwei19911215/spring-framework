@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,20 +21,22 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 
-import javax.servlet.http.HttpServletRequest;
-
+import jakarta.servlet.http.HttpServletRequest;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.handler.PathPatternsParameterizedTest;
 import org.springframework.web.servlet.handler.PathPatternsTestUtils;
 import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.util.UrlPathHelper;
 import org.springframework.web.util.pattern.PathPatternParser;
 
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Named.named;
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 import static org.springframework.web.bind.annotation.RequestMethod.HEAD;
 
@@ -46,25 +48,29 @@ import static org.springframework.web.bind.annotation.RequestMethod.HEAD;
  */
 class RequestMappingInfoTests {
 
-	@SuppressWarnings("unused")
-	static Stream<RequestMappingInfo.Builder> pathPatternsArguments() {
+	@SuppressWarnings({"unused", "removal"})
+	static Stream<Named<RequestMappingInfo.Builder>> pathPatternsArguments() {
 		RequestMappingInfo.BuilderConfiguration config = new RequestMappingInfo.BuilderConfiguration();
-		config.setPatternParser(new PathPatternParser());
-		return Stream.of(RequestMappingInfo.paths().options(config), RequestMappingInfo.paths());
+		config.setPathMatcher(new AntPathMatcher());
+		return Stream.of(
+				named("PathPatternParser", RequestMappingInfo.paths()),
+				named("AntPathMatcher", RequestMappingInfo.paths().options(config))
+			);
 	}
 
 
+	@SuppressWarnings({"removal", "DataFlowIssue"})
 	@PathPatternsParameterizedTest
 	void createEmpty(RequestMappingInfo.Builder infoBuilder) {
 
 		// gh-22543
 		RequestMappingInfo info = infoBuilder.build();
 		assertThat(info.getPatternValues()).isEqualTo(Collections.singleton(""));
-		assertThat(info.getMethodsCondition().getMethods().size()).isEqualTo(0);
+		assertThat(info.getMethodsCondition().getMethods()).isEmpty();
 		assertThat(info.getParamsCondition()).isNotNull();
 		assertThat(info.getHeadersCondition()).isNotNull();
-		assertThat(info.getConsumesCondition().isEmpty()).isEqualTo(true);
-		assertThat(info.getProducesCondition().isEmpty()).isEqualTo(true);
+		assertThat(info.getConsumesCondition().isEmpty()).isTrue();
+		assertThat(info.getProducesCondition().isEmpty()).isTrue();
 		assertThat(info.getCustomCondition()).isNull();
 
 		RequestMappingInfo anotherInfo = infoBuilder.build();
@@ -78,13 +84,21 @@ class RequestMappingInfoTests {
 		assertThat(info.getCustomCondition()).isSameAs(anotherInfo.getCustomCondition());
 
 		RequestMappingInfo result = info.combine(anotherInfo);
-		assertThat(info.getActivePatternsCondition()).isSameAs(result.getActivePatternsCondition());
+		assertThat(result.getPatternValues()).containsExactly("", "/");
 		assertThat(info.getMethodsCondition()).isSameAs(result.getMethodsCondition());
 		assertThat(info.getParamsCondition()).isSameAs(result.getParamsCondition());
 		assertThat(info.getHeadersCondition()).isSameAs(result.getHeadersCondition());
 		assertThat(info.getConsumesCondition()).isSameAs(result.getConsumesCondition());
 		assertThat(info.getProducesCondition()).isSameAs(result.getProducesCondition());
 		assertThat(info.getCustomCondition()).isSameAs(result.getCustomCondition());
+	}
+
+	@SuppressWarnings("removal")
+	@Test // gh-31662
+	void pathPatternByDefault() {
+		RequestMappingInfo info = RequestMappingInfo.paths().build();
+		assertThat(info.getPathPatternsCondition()).isNotNull();
+		assertThat(info.getPatternsCondition()).isNull();
 	}
 
 	@PathPatternsParameterizedTest
@@ -106,9 +120,8 @@ class RequestMappingInfoTests {
 
 	@Test
 	void matchParamsCondition() {
-		MockHttpServletRequest request = PathPatternsTestUtils.initRequest("GET", "/foo", false);
+		MockHttpServletRequest request = PathPatternsTestUtils.initRequest("GET", "/foo", true);
 		request.setParameter("foo", "bar");
-		UrlPathHelper.defaultInstance.resolveAndCacheLookupPath(request);
 
 		RequestMappingInfo info = RequestMappingInfo.paths("/foo").params("foo=bar").build();
 		RequestMappingInfo match = info.getMatchingCondition(request);
@@ -123,9 +136,8 @@ class RequestMappingInfoTests {
 
 	@Test
 	void matchHeadersCondition() {
-		MockHttpServletRequest request = PathPatternsTestUtils.initRequest("GET", "/foo", false);
+		MockHttpServletRequest request = PathPatternsTestUtils.initRequest("GET", "/foo", true);
 		request.addHeader("foo", "bar");
-		UrlPathHelper.defaultInstance.resolveAndCacheLookupPath(request);
 
 		RequestMappingInfo info = RequestMappingInfo.paths("/foo").headers("foo=bar").build();
 		RequestMappingInfo match = info.getMatchingCondition(request);
@@ -140,9 +152,8 @@ class RequestMappingInfoTests {
 
 	@Test
 	void matchConsumesCondition() {
-		MockHttpServletRequest request = PathPatternsTestUtils.initRequest("GET", "/foo", false);
+		MockHttpServletRequest request = PathPatternsTestUtils.initRequest("GET", "/foo", true);
 		request.setContentType("text/plain");
-		UrlPathHelper.defaultInstance.resolveAndCacheLookupPath(request);
 
 		RequestMappingInfo info = RequestMappingInfo.paths("/foo").consumes("text/plain").build();
 		RequestMappingInfo match = info.getMatchingCondition(request);
@@ -157,9 +168,8 @@ class RequestMappingInfoTests {
 
 	@Test
 	void matchProducesCondition() {
-		MockHttpServletRequest request = PathPatternsTestUtils.initRequest("GET", "/foo", false);
+		MockHttpServletRequest request = PathPatternsTestUtils.initRequest("GET", "/foo", true);
 		request.addHeader("Accept", "text/plain");
-		UrlPathHelper.defaultInstance.resolveAndCacheLookupPath(request);
 
 		RequestMappingInfo info = RequestMappingInfo.paths("/foo").produces("text/plain").build();
 		RequestMappingInfo match = info.getMatchingCondition(request);
@@ -174,9 +184,8 @@ class RequestMappingInfoTests {
 
 	@Test
 	void matchCustomCondition() {
-		MockHttpServletRequest request = PathPatternsTestUtils.initRequest("GET", "/foo", false);
+		MockHttpServletRequest request = PathPatternsTestUtils.initRequest("GET", "/foo", true);
 		request.setParameter("foo", "bar");
-		UrlPathHelper.defaultInstance.resolveAndCacheLookupPath(request);
 
 		RequestMappingInfo info = RequestMappingInfo.paths("/foo").params("foo=bar").build();
 		RequestMappingInfo match = info.getMatchingCondition(request);
@@ -190,28 +199,25 @@ class RequestMappingInfoTests {
 	}
 
 	@Test
-	void compareToWithImpicitVsExplicitHttpMethodDeclaration() {
+	void compareToWithImplicitVsExplicitHttpMethodDeclaration() {
 		RequestMappingInfo noMethods = RequestMappingInfo.paths().build();
 		RequestMappingInfo oneMethod = RequestMappingInfo.paths().methods(GET).build();
 		RequestMappingInfo oneMethodOneParam = RequestMappingInfo.paths().methods(GET).params("foo").build();
 
-		MockHttpServletRequest request = PathPatternsTestUtils.initRequest("GET", "/", false);
-		UrlPathHelper.defaultInstance.resolveAndCacheLookupPath(request);
+		MockHttpServletRequest request = PathPatternsTestUtils.initRequest("GET", "/", true);
 		Comparator<RequestMappingInfo> comparator = (info, otherInfo) -> info.compareTo(otherInfo, request);
 
 		List<RequestMappingInfo> list = asList(noMethods, oneMethod, oneMethodOneParam);
 		Collections.shuffle(list);
 		list.sort(comparator);
 
-		assertThat(list.get(0)).isEqualTo(oneMethodOneParam);
-		assertThat(list.get(1)).isEqualTo(oneMethod);
-		assertThat(list.get(2)).isEqualTo(noMethods);
+		assertThat(list).containsExactly(oneMethodOneParam, oneMethod, noMethods);
 	}
 
 	@Test
 		// SPR-14383
 	void compareToWithHttpHeadMapping() {
-		MockHttpServletRequest request = PathPatternsTestUtils.initRequest("GET", "/", false);
+		MockHttpServletRequest request = PathPatternsTestUtils.initRequest("GET", "/", true);
 		request.setMethod("HEAD");
 		request.addHeader("Accept", "application/json");
 
@@ -225,9 +231,7 @@ class RequestMappingInfoTests {
 		Collections.shuffle(list);
 		list.sort(comparator);
 
-		assertThat(list.get(0)).isEqualTo(headMethod);
-		assertThat(list.get(1)).isEqualTo(getMethod);
-		assertThat(list.get(2)).isEqualTo(noMethods);
+		assertThat(list).containsExactly(headMethod, getMethod, noMethods);
 	}
 
 	@PathPatternsParameterizedTest
@@ -250,7 +254,7 @@ class RequestMappingInfoTests {
 				.consumes("text/plain").produces("text/plain")
 				.build();
 
-		assertThat(info1.equals(info2)).isFalse();
+		assertThat(info1).isNotEqualTo(info2);
 		assertThat(info2.hashCode()).isNotEqualTo(info1.hashCode());
 
 		info2 = infoBuilder.paths("/foo").methods(GET, RequestMethod.POST)
@@ -258,7 +262,7 @@ class RequestMappingInfoTests {
 				.consumes("text/plain").produces("text/plain")
 				.build();
 
-		assertThat(info1.equals(info2)).isFalse();
+		assertThat(info1).isNotEqualTo(info2);
 		assertThat(info2.hashCode()).isNotEqualTo(info1.hashCode());
 
 		info2 = infoBuilder.paths("/foo").methods(GET)
@@ -266,7 +270,7 @@ class RequestMappingInfoTests {
 				.consumes("text/plain").produces("text/plain")
 				.build();
 
-		assertThat(info1.equals(info2)).isFalse();
+		assertThat(info1).isNotEqualTo(info2);
 		assertThat(info2.hashCode()).isNotEqualTo(info1.hashCode());
 
 		info2 = infoBuilder.paths("/foo").methods(GET)
@@ -274,7 +278,7 @@ class RequestMappingInfoTests {
 				.consumes("text/plain").produces("text/plain")
 				.build();
 
-		assertThat(info1.equals(info2)).isFalse();
+		assertThat(info1).isNotEqualTo(info2);
 		assertThat(info2.hashCode()).isNotEqualTo(info1.hashCode());
 
 		info2 = infoBuilder.paths("/foo").methods(GET)
@@ -282,7 +286,7 @@ class RequestMappingInfoTests {
 				.consumes("text/NOOOOOO").produces("text/plain")
 				.build();
 
-		assertThat(info1.equals(info2)).isFalse();
+		assertThat(info1).isNotEqualTo(info2);
 		assertThat(info2.hashCode()).isNotEqualTo(info1.hashCode());
 
 		info2 = infoBuilder.paths("/foo").methods(GET)
@@ -290,7 +294,7 @@ class RequestMappingInfoTests {
 				.consumes("text/plain").produces("text/NOOOOOO")
 				.build();
 
-		assertThat(info1.equals(info2)).isFalse();
+		assertThat(info1).isNotEqualTo(info2);
 		assertThat(info2.hashCode()).isNotEqualTo(info1.hashCode());
 
 		info2 = infoBuilder.paths("/foo").methods(GET)
@@ -298,13 +302,13 @@ class RequestMappingInfoTests {
 				.consumes("text/plain").produces("text/plain")
 				.build();
 
-		assertThat(info1.equals(info2)).isFalse();
+		assertThat(info1).isNotEqualTo(info2);
 		assertThat(info2.hashCode()).isNotEqualTo(info1.hashCode());
 	}
 
 	@Test
 	void preFlightRequest() {
-		MockHttpServletRequest request = PathPatternsTestUtils.initRequest("OPTIONS", "/foo", false);
+		MockHttpServletRequest request = PathPatternsTestUtils.initRequest("OPTIONS", "/foo", true);
 		request.addHeader(HttpHeaders.ORIGIN, "https://domain.com");
 		request.addHeader(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST");
 
@@ -315,6 +319,30 @@ class RequestMappingInfoTests {
 		info = RequestMappingInfo.paths("/foo").methods(RequestMethod.OPTIONS).build();
 		match = info.getMatchingCondition(request);
 		assertThat(match).as("Pre-flight should match the ACCESS_CONTROL_REQUEST_METHOD").isNull();
+	}
+
+	@SuppressWarnings("removal")
+	@Test
+	void mutate() {
+		RequestMappingInfo.BuilderConfiguration options = new RequestMappingInfo.BuilderConfiguration();
+		options.setPatternParser(new PathPatternParser());
+
+		RequestMappingInfo info1 = RequestMappingInfo.paths("/foo")
+				.methods(GET).headers("h1=hv1").params("q1=qv1")
+				.consumes("application/json").produces("application/json")
+				.mappingName("testMapping").options(options)
+				.build();
+
+		RequestMappingInfo info2 = info1.mutate().produces("application/hal+json").build();
+
+		assertThat(info2.getName()).isEqualTo(info1.getName());
+		assertThat(info2.getPatternsCondition()).isNull();
+		assertThat(info2.getPathPatternsCondition()).isEqualTo(info1.getPathPatternsCondition());
+		assertThat(info2.getHeadersCondition()).isEqualTo(info1.getHeadersCondition());
+		assertThat(info2.getParamsCondition()).isEqualTo(info1.getParamsCondition());
+		assertThat(info2.getConsumesCondition()).isEqualTo(info1.getConsumesCondition());
+		assertThat(info2.getProducesCondition().getProducibleMediaTypes())
+				.containsOnly(MediaType.parseMediaType("application/hal+json"));
 	}
 
 }

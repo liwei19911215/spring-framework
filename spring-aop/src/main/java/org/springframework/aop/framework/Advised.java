@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,9 +56,9 @@ public interface Advised extends TargetClassAware {
 
 	/**
 	 * Determine whether the given interface is proxied.
-	 * @param intf the interface to check
+	 * @param ifc the interface to check
 	 */
-	boolean isInterfaceProxied(Class<?> intf);
+	boolean isInterfaceProxied(Class<?> ifc);
 
 	/**
 	 * Change the {@code TargetSource} used by this {@code Advised} object.
@@ -113,6 +113,15 @@ public interface Advised extends TargetClassAware {
 	 * @return a list of Advisors applying to this proxy (never {@code null})
 	 */
 	Advisor[] getAdvisors();
+
+	/**
+	 * Return the number of advisors applying to this proxy.
+	 * <p>The default implementation delegates to {@code getAdvisors().length}.
+	 * @since 5.3.1
+	 */
+	default int getAdvisorCount() {
+		return getAdvisors().length;
+	}
 
 	/**
 	 * Add an advisor at the end of the advisor chain.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,10 +23,12 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-import org.springframework.lang.Nullable;
+import org.springframework.util.CollectionUtils;
 
 /**
  * Abstract base class implementing the common {@link CacheManager} methods.
@@ -64,7 +66,7 @@ public abstract class AbstractCacheManager implements CacheManager, Initializing
 		synchronized (this.cacheMap) {
 			this.cacheNames = Collections.emptySet();
 			this.cacheMap.clear();
-			Set<String> cacheNames = new LinkedHashSet<>(caches.size());
+			Set<String> cacheNames = CollectionUtils.newLinkedHashSet(caches.size());
 			for (Cache cache : caches) {
 				String name = cache.getName();
 				this.cacheMap.put(name, decorateCache(cache));
@@ -85,8 +87,7 @@ public abstract class AbstractCacheManager implements CacheManager, Initializing
 	// Lazy cache initialization on access
 
 	@Override
-	@Nullable
-	public Cache getCache(String name) {
+	public @Nullable Cache getCache(String name) {
 		// Quick check for existing cache...
 		Cache cache = this.cacheMap.get(name);
 		if (cache != null) {
@@ -127,24 +128,8 @@ public abstract class AbstractCacheManager implements CacheManager, Initializing
 	 * @see #getCache(String)
 	 * @see #getMissingCache(String)
 	 */
-	@Nullable
-	protected final Cache lookupCache(String name) {
+	protected final @Nullable Cache lookupCache(String name) {
 		return this.cacheMap.get(name);
-	}
-
-	/**
-	 * Dynamically register an additional Cache with this manager.
-	 * @param cache the Cache to register
-	 * @deprecated as of Spring 4.3, in favor of {@link #getMissingCache(String)}
-	 */
-	@Deprecated
-	protected final void addCache(Cache cache) {
-		String name = cache.getName();
-		synchronized (this.cacheMap) {
-			if (this.cacheMap.put(name, decorateCache(cache)) == null) {
-				updateCacheNames(name);
-			}
-		}
 	}
 
 	/**
@@ -155,8 +140,7 @@ public abstract class AbstractCacheManager implements CacheManager, Initializing
 	 * @param name the name of the cache to be added
 	 */
 	private void updateCacheNames(String name) {
-		Set<String> cacheNames = new LinkedHashSet<>(this.cacheNames.size() + 1);
-		cacheNames.addAll(this.cacheNames);
+		Set<String> cacheNames = new LinkedHashSet<>(this.cacheNames);
 		cacheNames.add(name);
 		this.cacheNames = Collections.unmodifiableSet(cacheNames);
 	}
@@ -187,8 +171,7 @@ public abstract class AbstractCacheManager implements CacheManager, Initializing
 	 * @since 4.1
 	 * @see #getCache(String)
 	 */
-	@Nullable
-	protected Cache getMissingCache(String name) {
+	protected @Nullable Cache getMissingCache(String name) {
 		return null;
 	}
 

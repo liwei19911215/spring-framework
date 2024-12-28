@@ -19,11 +19,11 @@ package org.springframework.web.servlet.handler;
 import java.util.Collections;
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.core.Ordered;
-import org.springframework.lang.Nullable;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.web.servlet.ModelAndView;
 
@@ -36,8 +36,7 @@ import org.springframework.web.servlet.ModelAndView;
  */
 public class HandlerExceptionResolverComposite implements HandlerExceptionResolver, Ordered {
 
-	@Nullable
-	private List<HandlerExceptionResolver> resolvers;
+	private @Nullable List<HandlerExceptionResolver> resolvers;
 
 	private int order = Ordered.LOWEST_PRECEDENCE;
 
@@ -71,8 +70,7 @@ public class HandlerExceptionResolverComposite implements HandlerExceptionResolv
 	 * <p>The first one to return a {@link ModelAndView} wins. Otherwise {@code null} is returned.
 	 */
 	@Override
-	@Nullable
-	public ModelAndView resolveException(
+	public @Nullable ModelAndView resolveException(
 			HttpServletRequest request, HttpServletResponse response, @Nullable Object handler, Exception ex) {
 
 		if (this.resolvers != null) {

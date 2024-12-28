@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,12 @@
 
 package org.springframework.beans.factory.config;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.BeanDefinitionStoreException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.BeanNameAware;
-import org.springframework.lang.Nullable;
 import org.springframework.util.StringValueResolver;
 
 /**
@@ -36,15 +37,16 @@ import org.springframework.util.StringValueResolver;
  * Example XML bean definition:
  *
  * <pre class="code">
- * &lt;bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource"/&gt;
- *   &lt;property name="driverClassName" value="${driver}"/&gt;
- *   &lt;property name="url" value="jdbc:${dbname}"/&gt;
+ * &lt;bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource"&gt;
+ *   &lt;property name="driverClassName" value="${driver}" /&gt;
+ *   &lt;property name="url" value="jdbc:${dbname}" /&gt;
  * &lt;/bean&gt;
  * </pre>
  *
  * Example properties file:
  *
- * <pre class="code">driver=com.mysql.jdbc.Driver
+ * <pre class="code">
+ * driver=com.mysql.jdbc.Driver
  * dbname=mysql:mydb</pre>
  *
  * Annotated bean definitions may take advantage of property replacement using
@@ -56,7 +58,8 @@ import org.springframework.util.StringValueResolver;
  * in bean references. Furthermore, placeholder values can also cross-reference
  * other placeholders, like:
  *
- * <pre class="code">rootPath=myrootdir
+ * <pre class="code">
+ * rootPath=myrootdir
  * subPath=${rootPath}/subdir</pre>
  *
  * In contrast to {@link PropertyOverrideConfigurer}, subclasses of this type allow
@@ -71,13 +74,13 @@ import org.springframework.util.StringValueResolver;
  *
  * <p>Default property values can be defined globally for each configurer instance
  * via the {@link #setProperties properties} property, or on a property-by-property basis
- * using the default value separator which is {@code ":"} by default and
- * customizable via {@link #setValueSeparator(String)}.
+ * using the value separator which is {@code ":"} by default and customizable via
+ * {@link #setValueSeparator(String)}.
  *
  * <p>Example XML property with default value:
  *
  * <pre class="code">
- *   <property name="url" value="jdbc:${dbname:defaultdb}"/>
+ *   &lt;property name="url" value="jdbc:${dbname:defaultdb}" /&gt;
  * </pre>
  *
  * @author Chris Beams
@@ -98,6 +101,8 @@ public abstract class PlaceholderConfigurerSupport extends PropertyResourceConfi
 	/** Default value separator: {@value}. */
 	public static final String DEFAULT_VALUE_SEPARATOR = ":";
 
+	/** Default escape character: {@code '\'}. */
+	public static final Character DEFAULT_ESCAPE_CHARACTER = '\\';
 
 	/** Defaults to {@value #DEFAULT_PLACEHOLDER_PREFIX}. */
 	protected String placeholderPrefix = DEFAULT_PLACEHOLDER_PREFIX;
@@ -106,21 +111,20 @@ public abstract class PlaceholderConfigurerSupport extends PropertyResourceConfi
 	protected String placeholderSuffix = DEFAULT_PLACEHOLDER_SUFFIX;
 
 	/** Defaults to {@value #DEFAULT_VALUE_SEPARATOR}. */
-	@Nullable
-	protected String valueSeparator = DEFAULT_VALUE_SEPARATOR;
+	protected @Nullable String valueSeparator = DEFAULT_VALUE_SEPARATOR;
+
+	/** Defaults to {@link #DEFAULT_ESCAPE_CHARACTER}. */
+	protected @Nullable Character escapeCharacter = DEFAULT_ESCAPE_CHARACTER;
 
 	protected boolean trimValues = false;
 
-	@Nullable
-	protected String nullValue;
+	protected @Nullable String nullValue;
 
 	protected boolean ignoreUnresolvablePlaceholders = false;
 
-	@Nullable
-	private String beanName;
+	private @Nullable String beanName;
 
-	@Nullable
-	private BeanFactory beanFactory;
+	private @Nullable BeanFactory beanFactory;
 
 
 	/**
@@ -150,6 +154,17 @@ public abstract class PlaceholderConfigurerSupport extends PropertyResourceConfi
 	}
 
 	/**
+	 * Specify the escape character to use to ignore placeholder prefix
+	 * or value separator, or {@code null} if no escaping should take
+	 * place.
+	 * <p>Default is {@link #DEFAULT_ESCAPE_CHARACTER}.
+	 * @since 6.2
+	 */
+	public void setEscapeCharacter(@Nullable Character escsEscapeCharacter) {
+		this.escapeCharacter = escsEscapeCharacter;
+	}
+
+	/**
 	 * Specify whether to trim resolved values before applying them,
 	 * removing superfluous whitespace from the beginning and end.
 	 * <p>Default is {@code false}.
@@ -161,7 +176,7 @@ public abstract class PlaceholderConfigurerSupport extends PropertyResourceConfi
 
 	/**
 	 * Set a value that should be treated as {@code null} when resolved
-	 * as a placeholder value: e.g. "" (empty String) or "null".
+	 * as a placeholder value: for example, "" (empty String) or "null".
 	 * <p>Note that this will only apply to full property values,
 	 * not to parts of concatenated values.
 	 * <p>By default, no such null value is defined. This means that
@@ -209,7 +224,6 @@ public abstract class PlaceholderConfigurerSupport extends PropertyResourceConfi
 		this.beanFactory = beanFactory;
 	}
 
-
 	protected void doProcessProperties(ConfigurableListableBeanFactory beanFactoryToProcess,
 			StringValueResolver valueResolver) {
 
@@ -230,10 +244,10 @@ public abstract class PlaceholderConfigurerSupport extends PropertyResourceConfi
 			}
 		}
 
-		// New in Spring 2.5: resolve placeholders in alias target names and aliases as well.
+		// Resolve placeholders in alias target names and aliases as well.
 		beanFactoryToProcess.resolveAliases(valueResolver);
 
-		// New in Spring 3.0: resolve placeholders in embedded values such as annotation attributes.
+		// Resolve placeholders in embedded values such as annotation attributes.
 		beanFactoryToProcess.addEmbeddedValueResolver(valueResolver);
 	}
 

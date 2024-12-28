@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,14 @@
 
 package org.springframework.orm.hibernate5;
 
-import javax.persistence.PersistenceException;
-
+import jakarta.persistence.PersistenceException;
 import org.hibernate.HibernateException;
 import org.hibernate.JDBCException;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.support.PersistenceExceptionTranslator;
 import org.springframework.jdbc.support.SQLExceptionTranslator;
-import org.springframework.lang.Nullable;
 import org.springframework.orm.jpa.EntityManagerFactoryUtils;
 
 /**
@@ -46,8 +45,7 @@ import org.springframework.orm.jpa.EntityManagerFactoryUtils;
  */
 public class HibernateExceptionTranslator implements PersistenceExceptionTranslator {
 
-	@Nullable
-	private SQLExceptionTranslator jdbcExceptionTranslator;
+	private @Nullable SQLExceptionTranslator jdbcExceptionTranslator;
 
 
 	/**
@@ -67,14 +65,13 @@ public class HibernateExceptionTranslator implements PersistenceExceptionTransla
 
 
 	@Override
-	@Nullable
-	public DataAccessException translateExceptionIfPossible(RuntimeException ex) {
-		if (ex instanceof HibernateException) {
-			return convertHibernateAccessException((HibernateException) ex);
+	public @Nullable DataAccessException translateExceptionIfPossible(RuntimeException ex) {
+		if (ex instanceof HibernateException hibernateEx) {
+			return convertHibernateAccessException(hibernateEx);
 		}
 		if (ex instanceof PersistenceException) {
-			if (ex.getCause() instanceof HibernateException) {
-				return convertHibernateAccessException((HibernateException) ex.getCause());
+			if (ex.getCause() instanceof HibernateException hibernateEx) {
+				return convertHibernateAccessException(hibernateEx);
 			}
 			return EntityManagerFactoryUtils.convertJpaAccessExceptionIfPossible(ex);
 		}
@@ -91,12 +88,11 @@ public class HibernateExceptionTranslator implements PersistenceExceptionTransla
 	 * @see SessionFactoryUtils#convertHibernateAccessException
 	 */
 	protected DataAccessException convertHibernateAccessException(HibernateException ex) {
-		if (this.jdbcExceptionTranslator != null && ex instanceof JDBCException) {
-			JDBCException jdbcEx = (JDBCException) ex;
+		if (this.jdbcExceptionTranslator != null && ex instanceof JDBCException jdbcEx) {
 			DataAccessException dae = this.jdbcExceptionTranslator.translate(
 					"Hibernate operation: " + jdbcEx.getMessage(), jdbcEx.getSQL(), jdbcEx.getSQLException());
 			if (dae != null) {
-				throw dae;
+				return dae;
 			}
 		}
 		return SessionFactoryUtils.convertHibernateAccessException(ex);

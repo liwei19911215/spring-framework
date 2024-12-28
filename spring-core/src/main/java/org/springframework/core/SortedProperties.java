@@ -30,7 +30,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Specialization of {@link Properties} that sorts properties alphanumerically
@@ -90,7 +90,7 @@ class SortedProperties extends Properties {
 	public void store(OutputStream out, @Nullable String comments) throws IOException {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		super.store(baos, (this.omitComments ? null : comments));
-		String contents = baos.toString(StandardCharsets.ISO_8859_1.name());
+		String contents = baos.toString(StandardCharsets.ISO_8859_1);
 		for (String line : contents.split(EOL)) {
 			if (!(this.omitComments && line.startsWith("#"))) {
 				out.write((line + EOL).getBytes(StandardCharsets.ISO_8859_1));

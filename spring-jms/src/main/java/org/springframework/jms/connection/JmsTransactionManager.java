@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,14 @@
 
 package org.springframework.jms.connection;
 
-import javax.jms.Connection;
-import javax.jms.ConnectionFactory;
-import javax.jms.JMSException;
-import javax.jms.Session;
-import javax.jms.TransactionRolledBackException;
+import jakarta.jms.Connection;
+import jakarta.jms.ConnectionFactory;
+import jakarta.jms.JMSException;
+import jakarta.jms.Session;
+import jakarta.jms.TransactionRolledBackException;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.lang.Nullable;
 import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.transaction.InvalidIsolationLevelException;
 import org.springframework.transaction.TransactionDefinition;
@@ -38,7 +38,7 @@ import org.springframework.util.Assert;
 
 /**
  * {@link org.springframework.transaction.PlatformTransactionManager} implementation
- * for a single JMS {@link javax.jms.ConnectionFactory}. Binds a JMS
+ * for a single JMS {@link jakarta.jms.ConnectionFactory}. Binds a JMS
  * Connection/Session pair from the specified ConnectionFactory to the thread,
  * potentially allowing for one thread-bound Session per ConnectionFactory.
  *
@@ -52,12 +52,12 @@ import org.springframework.util.Assert;
  *
  * <p>Application code is required to retrieve the transactional JMS Session via
  * {@link ConnectionFactoryUtils#getTransactionalSession} instead of a standard
- * Java EE-style {@link ConnectionFactory#createConnection()} call with subsequent
+ * Jakarta EE-style {@link ConnectionFactory#createConnection()} call with subsequent
  * Session creation. Spring's {@link org.springframework.jms.core.JmsTemplate}
  * will autodetect a thread-bound Session and automatically participate in it.
  *
  * <p>Alternatively, you can allow application code to work with the standard
- * Java EE-style lookup pattern on a ConnectionFactory, for example for legacy code
+ * Jakarta EE-style lookup pattern on a ConnectionFactory, for example for legacy code
  * that is not aware of Spring at all. In that case, define a
  * {@link TransactionAwareConnectionFactoryProxy} for your target ConnectionFactory,
  * which will automatically participate in Spring-managed transactions.
@@ -93,8 +93,7 @@ import org.springframework.util.Assert;
 public class JmsTransactionManager extends AbstractPlatformTransactionManager
 		implements ResourceTransactionManager, InitializingBean {
 
-	@Nullable
-	private ConnectionFactory connectionFactory;
+	private @Nullable ConnectionFactory connectionFactory;
 
 	private boolean lazyResourceRetrieval = false;
 
@@ -130,11 +129,11 @@ public class JmsTransactionManager extends AbstractPlatformTransactionManager
 	 * Set the JMS ConnectionFactory that this instance should manage transactions for.
 	 */
 	public void setConnectionFactory(@Nullable ConnectionFactory cf) {
-		if (cf instanceof TransactionAwareConnectionFactoryProxy) {
+		if (cf instanceof TransactionAwareConnectionFactoryProxy txAwareCFP) {
 			// If we got a TransactionAwareConnectionFactoryProxy, we need to perform transactions
 			// for its underlying target ConnectionFactory, else JMS access code won't see
 			// properly exposed transactions (i.e. transactions for the target ConnectionFactory).
-			this.connectionFactory = ((TransactionAwareConnectionFactoryProxy) cf).getTargetConnectionFactory();
+			this.connectionFactory = txAwareCFP.getTargetConnectionFactory();
 		}
 		else {
 			this.connectionFactory = cf;
@@ -144,8 +143,7 @@ public class JmsTransactionManager extends AbstractPlatformTransactionManager
 	/**
 	 * Return the JMS ConnectionFactory that this instance should manage transactions for.
 	 */
-	@Nullable
-	public ConnectionFactory getConnectionFactory() {
+	public @Nullable ConnectionFactory getConnectionFactory() {
 		return this.connectionFactory;
 	}
 
@@ -324,7 +322,7 @@ public class JmsTransactionManager extends AbstractPlatformTransactionManager
 	 * Create a JMS Connection via this template's ConnectionFactory.
 	 * <p>This implementation uses JMS 1.1 API.
 	 * @return the new JMS Connection
-	 * @throws javax.jms.JMSException if thrown by JMS API methods
+	 * @throws jakarta.jms.JMSException if thrown by JMS API methods
 	 */
 	protected Connection createConnection() throws JMSException {
 		return obtainConnectionFactory().createConnection();
@@ -335,7 +333,7 @@ public class JmsTransactionManager extends AbstractPlatformTransactionManager
 	 * <p>This implementation uses JMS 1.1 API.
 	 * @param con the JMS Connection to create a Session for
 	 * @return the new JMS Session
-	 * @throws javax.jms.JMSException if thrown by JMS API methods
+	 * @throws jakarta.jms.JMSException if thrown by JMS API methods
 	 */
 	protected Session createSession(Connection con) throws JMSException {
 		return con.createSession(true, Session.AUTO_ACKNOWLEDGE);
@@ -357,36 +355,31 @@ public class JmsTransactionManager extends AbstractPlatformTransactionManager
 		}
 
 		@Override
-		@Nullable
-		public Connection getConnection() {
+		public @Nullable Connection getConnection() {
 			initializeConnection();
 			return super.getConnection();
 		}
 
 		@Override
-		@Nullable
-		public <C extends Connection> C getConnection(Class<C> connectionType) {
+		public <C extends Connection> @Nullable C getConnection(Class<C> connectionType) {
 			initializeConnection();
 			return super.getConnection(connectionType);
 		}
 
 		@Override
-		@Nullable
-		public Session getSession() {
+		public @Nullable Session getSession() {
 			initializeSession();
 			return super.getSession();
 		}
 
 		@Override
-		@Nullable
-		public <S extends Session> S getSession(Class<S> sessionType) {
+		public <S extends Session> @Nullable S getSession(Class<S> sessionType) {
 			initializeSession();
 			return super.getSession(sessionType);
 		}
 
 		@Override
-		@Nullable
-		public <S extends Session> S getSession(Class<S> sessionType, @Nullable Connection connection) {
+		public <S extends Session> @Nullable S getSession(Class<S> sessionType, @Nullable Connection connection) {
 			initializeSession();
 			return super.getSession(sessionType, connection);
 		}
@@ -428,8 +421,7 @@ public class JmsTransactionManager extends AbstractPlatformTransactionManager
 	 */
 	private static class JmsTransactionObject implements SmartTransactionObject {
 
-		@Nullable
-		private JmsResourceHolder resourceHolder;
+		private @Nullable JmsResourceHolder resourceHolder;
 
 		public void setResourceHolder(@Nullable JmsResourceHolder resourceHolder) {
 			this.resourceHolder = resourceHolder;
@@ -447,11 +439,6 @@ public class JmsTransactionManager extends AbstractPlatformTransactionManager
 		@Override
 		public boolean isRollbackOnly() {
 			return (this.resourceHolder != null && this.resourceHolder.isRollbackOnly());
-		}
-
-		@Override
-		public void flush() {
-			// no-op
 		}
 	}
 

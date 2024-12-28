@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,8 @@ package org.springframework.messaging.simp.stomp;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.messaging.converter.MessageConverter;
 import org.springframework.messaging.converter.SimpleMessageConverter;
 import org.springframework.scheduling.TaskScheduler;
@@ -29,8 +30,8 @@ import org.springframework.util.Assert;
  * Base class for STOMP client implementations.
  *
  * <p>Subclasses can connect over WebSocket or TCP using any library. When creating
- * a new connection, a subclass can create an instance of @link DefaultStompSession}
- * which extends {@link org.springframework.messaging.tcp.TcpConnectionHandler}
+ * a new connection, a subclass can create an instance of {@link DefaultStompSession}
+ * which implements {@link org.springframework.messaging.tcp.TcpConnectionHandler}
  * whose lifecycle methods the subclass must then invoke.
  *
  * <p>In effect, {@code TcpConnectionHandler} and {@code TcpConnection} are the
@@ -44,8 +45,7 @@ public abstract class StompClientSupport {
 
 	private MessageConverter messageConverter = new SimpleMessageConverter();
 
-	@Nullable
-	private TaskScheduler taskScheduler;
+	private @Nullable TaskScheduler taskScheduler;
 
 	private long[] defaultHeartbeat = new long[] {10000, 10000};
 
@@ -85,8 +85,7 @@ public abstract class StompClientSupport {
 	/**
 	 * The configured TaskScheduler.
 	 */
-	@Nullable
-	public TaskScheduler getTaskScheduler() {
+	public @Nullable TaskScheduler getTaskScheduler() {
 		return this.taskScheduler;
 	}
 

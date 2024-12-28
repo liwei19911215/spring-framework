@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,30 +19,29 @@ package org.springframework.web.socket.client.standard;
 import java.util.Arrays;
 import java.util.List;
 
-import javax.websocket.ClientEndpointConfig;
-import javax.websocket.ClientEndpointConfig.Configurator;
-import javax.websocket.ContainerProvider;
-import javax.websocket.Decoder;
-import javax.websocket.Encoder;
-import javax.websocket.Endpoint;
-import javax.websocket.Extension;
-import javax.websocket.Session;
-import javax.websocket.WebSocketContainer;
+import jakarta.websocket.ClientEndpointConfig;
+import jakarta.websocket.ClientEndpointConfig.Configurator;
+import jakarta.websocket.ContainerProvider;
+import jakarta.websocket.Decoder;
+import jakarta.websocket.Encoder;
+import jakarta.websocket.Endpoint;
+import jakarta.websocket.Extension;
+import jakarta.websocket.Session;
+import jakarta.websocket.WebSocketContainer;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.web.socket.client.ConnectionManagerSupport;
 import org.springframework.web.socket.handler.BeanCreatingHandlerProvider;
 
 /**
- * A WebSocket connection manager that is given a URI, an {@link Endpoint}, connects to a
- * WebSocket server through the {@link #start()} and {@link #stop()} methods. If
- * {@link #setAutoStartup(boolean)} is set to {@code true} this will be done automatically
- * when the Spring ApplicationContext is refreshed.
+ * WebSocket {@link ConnectionManagerSupport connection manager} that connects
+ * to the server via {@link WebSocketContainer} and handles the session with an
+ * {@link Endpoint}.
  *
  * @author Rossen Stoyanchev
  * @since 4.0
@@ -50,11 +49,9 @@ import org.springframework.web.socket.handler.BeanCreatingHandlerProvider;
  */
 public class EndpointConnectionManager extends ConnectionManagerSupport implements BeanFactoryAware {
 
-	@Nullable
-	private final Endpoint endpoint;
+	private final @Nullable Endpoint endpoint;
 
-	@Nullable
-	private final BeanCreatingHandlerProvider<Endpoint> endpointProvider;
+	private final @Nullable BeanCreatingHandlerProvider<Endpoint> endpointProvider;
 
 	private final ClientEndpointConfig.Builder configBuilder = ClientEndpointConfig.Builder.create();
 
@@ -62,8 +59,7 @@ public class EndpointConnectionManager extends ConnectionManagerSupport implemen
 
 	private TaskExecutor taskExecutor = new SimpleAsyncTaskExecutor("EndpointConnectionManager-");
 
-	@Nullable
-	private volatile Session session;
+	private volatile @Nullable Session session;
 
 
 	public EndpointConnectionManager(Endpoint endpoint, String uriTemplate, Object... uriVariables) {
@@ -134,6 +130,12 @@ public class EndpointConnectionManager extends ConnectionManagerSupport implemen
 
 
 	@Override
+	public boolean isConnected() {
+		Session session = this.session;
+		return (session != null && session.isOpen());
+	}
+
+	@Override
 	protected void openConnection() {
 		this.taskExecutor.execute(() -> {
 			try {
@@ -166,12 +168,6 @@ public class EndpointConnectionManager extends ConnectionManagerSupport implemen
 		finally {
 			this.session = null;
 		}
-	}
-
-	@Override
-	protected boolean isConnected() {
-		Session session = this.session;
-		return (session != null && session.isOpen());
 	}
 
 }

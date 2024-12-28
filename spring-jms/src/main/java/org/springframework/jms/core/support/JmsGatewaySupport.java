@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,17 @@
 
 package org.springframework.jms.core.support;
 
-import javax.jms.ConnectionFactory;
-
+import jakarta.jms.ConnectionFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.jms.core.JmsTemplate;
-import org.springframework.lang.Nullable;
 
 /**
- * Convenient super class for application classes that need JMS access.
+ * Convenient superclass for application classes that need JMS access.
  *
  * <p>Requires a ConnectionFactory or a JmsTemplate instance to be set.
  * It will create its own JmsTemplate if a ConnectionFactory is passed in.
@@ -46,15 +45,14 @@ public abstract class JmsGatewaySupport implements InitializingBean {
 	/** Logger available to subclasses. */
 	protected final Log logger = LogFactory.getLog(getClass());
 
-	@Nullable
-	private JmsTemplate jmsTemplate;
+	private @Nullable JmsTemplate jmsTemplate;
 
 
 	/**
 	 * Set the JMS connection factory to be used by the gateway.
 	 * Will automatically create a JmsTemplate for the given ConnectionFactory.
 	 * @see #createJmsTemplate
-	 * @see #setConnectionFactory(javax.jms.ConnectionFactory)
+	 * @see #setConnectionFactory(jakarta.jms.ConnectionFactory)
 	 */
 	public final void setConnectionFactory(ConnectionFactory connectionFactory) {
 		this.jmsTemplate = createJmsTemplate(connectionFactory);
@@ -76,14 +74,13 @@ public abstract class JmsGatewaySupport implements InitializingBean {
 	/**
 	 * Return the JMS ConnectionFactory used by the gateway.
 	 */
-	@Nullable
-	public final ConnectionFactory getConnectionFactory() {
+	public final @Nullable ConnectionFactory getConnectionFactory() {
 		return (this.jmsTemplate != null ? this.jmsTemplate.getConnectionFactory() : null);
 	}
 
 	/**
 	 * Set the JmsTemplate for the gateway.
-	 * @see #setConnectionFactory(javax.jms.ConnectionFactory)
+	 * @see #setConnectionFactory(jakarta.jms.ConnectionFactory)
 	 */
 	public final void setJmsTemplate(@Nullable JmsTemplate jmsTemplate) {
 		this.jmsTemplate = jmsTemplate;
@@ -92,8 +89,7 @@ public abstract class JmsGatewaySupport implements InitializingBean {
 	/**
 	 * Return the JmsTemplate for the gateway.
 	 */
-	@Nullable
-	public final JmsTemplate getJmsTemplate() {
+	public final @Nullable JmsTemplate getJmsTemplate() {
 		return this.jmsTemplate;
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 
 package org.springframework.ui.context.support;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.ui.context.HierarchicalThemeSource;
 import org.springframework.ui.context.Theme;
 import org.springframework.ui.context.ThemeSource;
@@ -31,11 +32,12 @@ import org.springframework.ui.context.ThemeSource;
  * @author Juergen Hoeller
  * @since 1.2.4
  * @see UiApplicationContextUtils
+ * @deprecated as of 6.0 in favor of using CSS, without direct replacement
  */
+@Deprecated(since = "6.0")
 public class DelegatingThemeSource implements HierarchicalThemeSource {
 
-	@Nullable
-	private ThemeSource parentThemeSource;
+	private @Nullable ThemeSource parentThemeSource;
 
 
 	@Override
@@ -44,15 +46,13 @@ public class DelegatingThemeSource implements HierarchicalThemeSource {
 	}
 
 	@Override
-	@Nullable
-	public ThemeSource getParentThemeSource() {
+	public @Nullable ThemeSource getParentThemeSource() {
 		return this.parentThemeSource;
 	}
 
 
 	@Override
-	@Nullable
-	public Theme getTheme(String themeName) {
+	public @Nullable Theme getTheme(String themeName) {
 		if (this.parentThemeSource != null) {
 			return this.parentThemeSource.getTheme(themeName);
 		}

@@ -16,11 +16,12 @@
 
 package org.springframework.beans.factory.annotation;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.support.GenericBeanDefinition;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.MethodMetadata;
 import org.springframework.core.type.StandardAnnotationMetadata;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -45,8 +46,7 @@ public class AnnotatedGenericBeanDefinition extends GenericBeanDefinition implem
 
 	private final AnnotationMetadata metadata;
 
-	@Nullable
-	private MethodMetadata factoryMethodMetadata;
+	private @Nullable MethodMetadata factoryMethodMetadata;
 
 
 	/**
@@ -70,8 +70,8 @@ public class AnnotatedGenericBeanDefinition extends GenericBeanDefinition implem
 	 */
 	public AnnotatedGenericBeanDefinition(AnnotationMetadata metadata) {
 		Assert.notNull(metadata, "AnnotationMetadata must not be null");
-		if (metadata instanceof StandardAnnotationMetadata) {
-			setBeanClass(((StandardAnnotationMetadata) metadata).getIntrospectedClass());
+		if (metadata instanceof StandardAnnotationMetadata sam) {
+			setBeanClass(sam.getIntrospectedClass());
 		}
 		else {
 			setBeanClassName(metadata.getClassName());
@@ -100,8 +100,7 @@ public class AnnotatedGenericBeanDefinition extends GenericBeanDefinition implem
 	}
 
 	@Override
-	@Nullable
-	public final MethodMetadata getFactoryMethodMetadata() {
+	public final @Nullable MethodMetadata getFactoryMethodMetadata() {
 		return this.factoryMethodMetadata;
 	}
 

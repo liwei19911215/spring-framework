@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,12 @@
 
 package org.springframework.web.util;
 
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletResponse;
-
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -30,16 +29,15 @@ import org.springframework.util.Assert;
  * as bean properties and being able to add and remove cookie to/from a
  * given response.
  *
- * <p>Can serve as base class for components that generate specific cookies,
- * such as CookieLocaleResolver and CookieThemeResolver.
+ * <p>Can serve as base class for components that generate specific cookies.
  *
  * @author Juergen Hoeller
  * @since 1.1.4
  * @see #addCookie
  * @see #removeCookie
- * @see org.springframework.web.servlet.i18n.CookieLocaleResolver
- * @see org.springframework.web.servlet.theme.CookieThemeResolver
+ * @deprecated as of 6.0 in favor of {@link org.springframework.http.ResponseCookie} for removal in 7.1
  */
+@Deprecated(since = "6.0", forRemoval = true)
 public class CookieGenerator {
 
 	/**
@@ -50,16 +48,13 @@ public class CookieGenerator {
 
 	protected final Log logger = LogFactory.getLog(getClass());
 
-	@Nullable
-	private String cookieName;
+	private @Nullable String cookieName;
 
-	@Nullable
-	private String cookieDomain;
+	private @Nullable String cookieDomain;
 
 	private String cookiePath = DEFAULT_COOKIE_PATH;
 
-	@Nullable
-	private Integer cookieMaxAge;
+	private @Nullable Integer cookieMaxAge;
 
 	private boolean cookieSecure = false;
 
@@ -68,7 +63,7 @@ public class CookieGenerator {
 
 	/**
 	 * Use the given name for cookies created by this generator.
-	 * @see javax.servlet.http.Cookie#getName()
+	 * @see jakarta.servlet.http.Cookie#getName()
 	 */
 	public void setCookieName(@Nullable String cookieName) {
 		this.cookieName = cookieName;
@@ -77,15 +72,14 @@ public class CookieGenerator {
 	/**
 	 * Return the given name for cookies created by this generator.
 	 */
-	@Nullable
-	public String getCookieName() {
+	public @Nullable String getCookieName() {
 		return this.cookieName;
 	}
 
 	/**
 	 * Use the given domain for cookies created by this generator.
 	 * The cookie is only visible to servers in this domain.
-	 * @see javax.servlet.http.Cookie#setDomain
+	 * @see jakarta.servlet.http.Cookie#setDomain
 	 */
 	public void setCookieDomain(@Nullable String cookieDomain) {
 		this.cookieDomain = cookieDomain;
@@ -94,15 +88,14 @@ public class CookieGenerator {
 	/**
 	 * Return the domain for cookies created by this generator, if any.
 	 */
-	@Nullable
-	public String getCookieDomain() {
+	public @Nullable String getCookieDomain() {
 		return this.cookieDomain;
 	}
 
 	/**
 	 * Use the given path for cookies created by this generator.
 	 * The cookie is only visible to URLs in this path and below.
-	 * @see javax.servlet.http.Cookie#setPath
+	 * @see jakarta.servlet.http.Cookie#setPath
 	 */
 	public void setCookiePath(String cookiePath) {
 		this.cookiePath = cookiePath;
@@ -120,7 +113,7 @@ public class CookieGenerator {
 	 * Useful special value: -1 ... not persistent, deleted when client shuts down.
 	 * <p>Default is no specific maximum age at all, using the Servlet container's
 	 * default.
-	 * @see javax.servlet.http.Cookie#setMaxAge
+	 * @see jakarta.servlet.http.Cookie#setMaxAge
 	 */
 	public void setCookieMaxAge(@Nullable Integer cookieMaxAge) {
 		this.cookieMaxAge = cookieMaxAge;
@@ -129,8 +122,7 @@ public class CookieGenerator {
 	/**
 	 * Return the maximum age for cookies created by this generator.
 	 */
-	@Nullable
-	public Integer getCookieMaxAge() {
+	public @Nullable Integer getCookieMaxAge() {
 		return this.cookieMaxAge;
 	}
 
@@ -139,7 +131,7 @@ public class CookieGenerator {
 	 * such as HTTPS (SSL). This is an indication to the receiving browser,
 	 * not processed by the HTTP server itself.
 	 * <p>Default is "false".
-	 * @see javax.servlet.http.Cookie#setSecure
+	 * @see jakarta.servlet.http.Cookie#setSecure
 	 */
 	public void setCookieSecure(boolean cookieSecure) {
 		this.cookieSecure = cookieSecure;
@@ -156,7 +148,7 @@ public class CookieGenerator {
 	/**
 	 * Set whether the cookie is supposed to be marked with the "HttpOnly" attribute.
 	 * <p>Default is "false".
-	 * @see javax.servlet.http.Cookie#setHttpOnly
+	 * @see jakarta.servlet.http.Cookie#setHttpOnly
 	 */
 	public void setCookieHttpOnly(boolean cookieHttpOnly) {
 		this.cookieHttpOnly = cookieHttpOnly;

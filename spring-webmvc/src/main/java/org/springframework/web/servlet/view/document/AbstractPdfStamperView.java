@@ -20,11 +20,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import com.lowagie.text.pdf.PdfReader;
 import com.lowagie.text.pdf.PdfStamper;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.util.Assert;
 import org.springframework.web.servlet.view.AbstractUrlBasedView;
@@ -100,7 +99,7 @@ public abstract class AbstractPdfStamperView extends AbstractUrlBasedView {
 	 *
 	 * // set some values on the form
 	 * form.setField("field1", "value1");
-	 * form.setField("field2", "Vvlue2");
+	 * form.setField("field2", "value2");
 	 *
 	 * // set the disposition and filename
 	 * response.setHeader("Content-disposition", "attachment; FILENAME=someName.pdf");</pre>
@@ -110,7 +109,7 @@ public abstract class AbstractPdfStamperView extends AbstractUrlBasedView {
 	 * @param model the model Map
 	 * @param stamper the PdfStamper instance that will contain the AcroFields.
 	 * You may also customize this PdfStamper instance according to your needs,
-	 * e.g. setting the "formFlattening" property.
+	 * for example, setting the "formFlattening" property.
 	 * @param request in case we need locale etc. Shouldn't look at attributes.
 	 * @param response in case we need to set cookies. Shouldn't write to it.
 	 * @throws Exception any exception that occurred during document building

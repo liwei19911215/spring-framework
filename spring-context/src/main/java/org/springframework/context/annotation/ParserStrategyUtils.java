@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package org.springframework.context.annotation;
 
 import java.lang.reflect.Constructor;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.BeanInstantiationException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.Aware;
@@ -30,12 +32,11 @@ import org.springframework.context.EnvironmentAware;
 import org.springframework.context.ResourceLoaderAware;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ResourceLoader;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * Common delegate code for the handling of parser strategies, e.g.
- * {@code TypeFilter}, {@code ImportSelector}, {@code ImportBeanDefinitionRegistrar}
+ * Common delegate code for the handling of parser strategies, for example,
+ * {@code TypeFilter}, {@code ImportSelector}, {@code ImportBeanDefinitionRegistrar}.
  *
  * @author Juergen Hoeller
  * @author Phillip Webb
@@ -60,8 +61,8 @@ abstract class ParserStrategyUtils {
 		if (clazz.isInterface()) {
 			throw new BeanInstantiationException(clazz, "Specified class is an interface");
 		}
-		ClassLoader classLoader = (registry instanceof ConfigurableBeanFactory ?
-				((ConfigurableBeanFactory) registry).getBeanClassLoader() : resourceLoader.getClassLoader());
+		ClassLoader classLoader = (registry instanceof ConfigurableBeanFactory cbf ?
+				cbf.getBeanClassLoader() : resourceLoader.getClassLoader());
 		T instance = (T) createInstance(clazz, environment, resourceLoader, registry, classLoader);
 		ParserStrategyUtils.invokeAwareMethods(instance, environment, resourceLoader, registry, classLoader);
 		return instance;
@@ -98,8 +99,7 @@ abstract class ParserStrategyUtils {
 			return parameters;
 	}
 
-	@Nullable
-	private static Object resolveParameter(Class<?> parameterType,
+	private static @Nullable Object resolveParameter(Class<?> parameterType,
 			Environment environment, ResourceLoader resourceLoader,
 			BeanDefinitionRegistry registry, @Nullable ClassLoader classLoader) {
 
@@ -122,17 +122,18 @@ abstract class ParserStrategyUtils {
 			ResourceLoader resourceLoader, BeanDefinitionRegistry registry, @Nullable ClassLoader classLoader) {
 
 		if (parserStrategyBean instanceof Aware) {
-			if (parserStrategyBean instanceof BeanClassLoaderAware && classLoader != null) {
-				((BeanClassLoaderAware) parserStrategyBean).setBeanClassLoader(classLoader);
+			if (parserStrategyBean instanceof BeanClassLoaderAware beanClassLoaderAware && classLoader != null) {
+				beanClassLoaderAware.setBeanClassLoader(classLoader);
 			}
-			if (parserStrategyBean instanceof BeanFactoryAware && registry instanceof BeanFactory) {
-				((BeanFactoryAware) parserStrategyBean).setBeanFactory((BeanFactory) registry);
+			if (parserStrategyBean instanceof BeanFactoryAware beanFactoryAware &&
+					registry instanceof BeanFactory beanFactory) {
+				beanFactoryAware.setBeanFactory(beanFactory);
 			}
-			if (parserStrategyBean instanceof EnvironmentAware) {
-				((EnvironmentAware) parserStrategyBean).setEnvironment(environment);
+			if (parserStrategyBean instanceof EnvironmentAware environmentAware) {
+				environmentAware.setEnvironment(environment);
 			}
-			if (parserStrategyBean instanceof ResourceLoaderAware) {
-				((ResourceLoaderAware) parserStrategyBean).setResourceLoader(resourceLoader);
+			if (parserStrategyBean instanceof ResourceLoaderAware resourceLoaderAware) {
+				resourceLoaderAware.setResourceLoader(resourceLoader);
 			}
 		}
 	}

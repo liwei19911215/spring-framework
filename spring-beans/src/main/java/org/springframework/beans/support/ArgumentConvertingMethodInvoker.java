@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,12 @@ package org.springframework.beans.support;
 import java.beans.PropertyEditor;
 import java.lang.reflect.Method;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.PropertyEditorRegistry;
 import org.springframework.beans.SimpleTypeConverter;
 import org.springframework.beans.TypeConverter;
 import org.springframework.beans.TypeMismatchException;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.MethodInvoker;
 import org.springframework.util.ReflectionUtils;
@@ -41,8 +42,7 @@ import org.springframework.util.ReflectionUtils;
  */
 public class ArgumentConvertingMethodInvoker extends MethodInvoker {
 
-	@Nullable
-	private TypeConverter typeConverter;
+	private @Nullable TypeConverter typeConverter;
 
 	private boolean useDefaultConverter = true;
 
@@ -67,8 +67,7 @@ public class ArgumentConvertingMethodInvoker extends MethodInvoker {
 	 * (provided that the present TypeConverter actually implements the
 	 * PropertyEditorRegistry interface).
 	 */
-	@Nullable
-	public TypeConverter getTypeConverter() {
+	public @Nullable TypeConverter getTypeConverter() {
 		if (this.typeConverter == null && this.useDefaultConverter) {
 			this.typeConverter = getDefaultTypeConverter();
 		}
@@ -98,11 +97,11 @@ public class ArgumentConvertingMethodInvoker extends MethodInvoker {
 	 */
 	public void registerCustomEditor(Class<?> requiredType, PropertyEditor propertyEditor) {
 		TypeConverter converter = getTypeConverter();
-		if (!(converter instanceof PropertyEditorRegistry)) {
+		if (!(converter instanceof PropertyEditorRegistry registry)) {
 			throw new IllegalStateException(
 					"TypeConverter does not implement PropertyEditorRegistry interface: " + converter);
 		}
-		((PropertyEditorRegistry) converter).registerCustomEditor(requiredType, propertyEditor);
+		registry.registerCustomEditor(requiredType, propertyEditor);
 	}
 
 
@@ -111,7 +110,7 @@ public class ArgumentConvertingMethodInvoker extends MethodInvoker {
 	 * @see #doFindMatchingMethod
 	 */
 	@Override
-	protected Method findMatchingMethod() {
+	protected @Nullable Method findMatchingMethod() {
 		Method matchingMethod = super.findMatchingMethod();
 		// Second pass: look for method where arguments can be converted to parameter types.
 		if (matchingMethod == null) {
@@ -131,8 +130,7 @@ public class ArgumentConvertingMethodInvoker extends MethodInvoker {
 	 * @param arguments the argument values to match against method parameters
 	 * @return a matching method, or {@code null} if none
 	 */
-	@Nullable
-	protected Method doFindMatchingMethod(Object[] arguments) {
+	protected @Nullable Method doFindMatchingMethod(Object[] arguments) {
 		TypeConverter converter = getTypeConverter();
 		if (converter != null) {
 			String targetMethod = getTargetMethod();

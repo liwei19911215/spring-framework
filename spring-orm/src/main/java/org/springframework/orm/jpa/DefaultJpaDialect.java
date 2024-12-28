@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,12 @@ package org.springframework.orm.jpa;
 import java.io.Serializable;
 import java.sql.SQLException;
 
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceException;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.datasource.ConnectionHandle;
-import org.springframework.lang.Nullable;
 import org.springframework.transaction.InvalidIsolationLevelException;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionException;
@@ -35,8 +35,6 @@ import org.springframework.transaction.TransactionException;
  *
  * <p>Simply begins a standard JPA transaction in {@link #beginTransaction} and
  * performs standard exception translation through {@link EntityManagerFactoryUtils}.
- *
- * <p><b>NOTE: Spring's JPA support requires JPA 2.1 or higher, as of Spring 5.0.</b>
  *
  * @author Juergen Hoeller
  * @since 2.0
@@ -53,13 +51,12 @@ public class DefaultJpaDialect implements JpaDialect, Serializable {
 	 * is no state to be kept for a standard JPA transaction. Hence, subclasses do not
 	 * have to care about the return value ({@code null}) of this implementation
 	 * and are free to return their own transaction data Object.
-	 * @see javax.persistence.EntityTransaction#begin
+	 * @see jakarta.persistence.EntityTransaction#begin
 	 * @see org.springframework.transaction.InvalidIsolationLevelException
 	 * @see #cleanupTransaction
 	 */
 	@Override
-	@Nullable
-	public Object beginTransaction(EntityManager entityManager, TransactionDefinition definition)
+	public @Nullable Object beginTransaction(EntityManager entityManager, TransactionDefinition definition)
 			throws PersistenceException, SQLException, TransactionException {
 
 		if (definition.getIsolationLevel() != TransactionDefinition.ISOLATION_DEFAULT) {
@@ -72,8 +69,7 @@ public class DefaultJpaDialect implements JpaDialect, Serializable {
 	}
 
 	@Override
-	@Nullable
-	public Object prepareTransaction(EntityManager entityManager, boolean readOnly, @Nullable String name)
+	public @Nullable Object prepareTransaction(EntityManager entityManager, boolean readOnly, @Nullable String name)
 			throws PersistenceException {
 
 		return null;
@@ -93,8 +89,7 @@ public class DefaultJpaDialect implements JpaDialect, Serializable {
 	 * indicating that no JDBC Connection can be provided.
 	 */
 	@Override
-	@Nullable
-	public ConnectionHandle getJdbcConnection(EntityManager entityManager, boolean readOnly)
+	public @Nullable ConnectionHandle getJdbcConnection(EntityManager entityManager, boolean readOnly)
 			throws PersistenceException, SQLException {
 
 		return null;
@@ -123,8 +118,7 @@ public class DefaultJpaDialect implements JpaDialect, Serializable {
 	 * @see EntityManagerFactoryUtils#convertJpaAccessExceptionIfPossible
 	 */
 	@Override
-	@Nullable
-	public DataAccessException translateExceptionIfPossible(RuntimeException ex) {
+	public @Nullable DataAccessException translateExceptionIfPossible(RuntimeException ex) {
 		return EntityManagerFactoryUtils.convertJpaAccessExceptionIfPossible(ex);
 	}
 

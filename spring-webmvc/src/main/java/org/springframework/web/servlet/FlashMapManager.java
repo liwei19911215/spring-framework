@@ -16,10 +16,9 @@
 
 package org.springframework.web.servlet;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.springframework.lang.Nullable;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A strategy interface for retrieving and saving FlashMap instances.
@@ -42,8 +41,7 @@ public interface FlashMapManager {
 	 * @param response the current response
 	 * @return a FlashMap matching the current request or {@code null}
 	 */
-	@Nullable
-	FlashMap retrieveAndUpdate(HttpServletRequest request, HttpServletResponse response);
+	@Nullable FlashMap retrieveAndUpdate(HttpServletRequest request, HttpServletResponse response);
 
 	/**
 	 * Save the given FlashMap, in some underlying storage and set the start

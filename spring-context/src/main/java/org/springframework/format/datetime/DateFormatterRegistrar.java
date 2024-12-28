@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2002-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,17 +19,18 @@ package org.springframework.format.datetime;
 import java.util.Calendar;
 import java.util.Date;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.convert.converter.ConverterRegistry;
 import org.springframework.format.FormatterRegistrar;
 import org.springframework.format.FormatterRegistry;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
  * Configures basic date formatting for use with Spring, primarily for
  * {@link org.springframework.format.annotation.DateTimeFormat} declarations.
- * Applies to fields of type {@link Date}, {@link Calendar} and {@code long}.
+ * Applies to fields of type {@link Date}, {@link Calendar}, and {@code long}.
  *
  * <p>Designed for direct instantiation but also exposes the static
  * {@link #addDateConverters(ConverterRegistry)} utility method for
@@ -38,13 +39,11 @@ import org.springframework.util.Assert;
  * @author Phillip Webb
  * @since 3.2
  * @see org.springframework.format.datetime.standard.DateTimeFormatterRegistrar
- * @see org.springframework.format.datetime.joda.JodaTimeFormatterRegistrar
  * @see FormatterRegistrar#registerFormatters
  */
 public class DateFormatterRegistrar implements FormatterRegistrar {
 
-	@Nullable
-	private DateFormatter dateFormatter;
+	private @Nullable DateFormatter dateFormatter;
 
 
 	/**
